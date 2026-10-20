@@ -151,6 +151,56 @@ function langSwitcher(current: Locale, date: string, isToday: boolean, t: String
   return `<details class="lang"><summary aria-label="${t.language}">${GLOBE}<span>${SHORT_NAMES[current]}</span></summary><div class="menu">${items}</div></details>`;
 }
 
+// ---- SEO ---------------------------------------------------------------------------------
+const SITE = "https://budokan.hewig.dev";
+const VENUE = {
+  "@type": "Place",
+  name: "日本武道館 (Nippon Budokan)",
+  address: { "@type": "PostalAddress", streetAddress: "北の丸公園2-3", addressLocality: "千代田区", addressRegion: "東京都", postalCode: "102-8321", addressCountry: "JP" },
+  geo: { "@type": "GeoCoordinates", latitude: 35.6933, longitude: 139.7499 },
+};
+
+const OG_LOCALE: Record<Locale, string> = { en: "en_GB", ja: "ja_JP", "zh-Hans": "zh_CN", "zh-Hant": "zh_TW", ko: "ko_KR" };
+
+const pageUrl = (locale: Locale, date?: string) => `${SITE}/?lang=${locale}${date ? `&date=${date}` : ""}`;
+
+function jsonLd(events: BudokanEvent[]): string {
+  const data = events.map((e) => ({
+    "@context": "https://schema.org",
+    "@type": e.kind === "budo" ? "SportsEvent" : "MusicEvent",
+    name: e.title && e.title !== e.headline ? `${e.headline} ${e.title}` : e.headline,
+    startDate: e.start ? `${e.date}T${e.start}:00+09:00` : e.date,
+    ...(e.end && { endDate: `${e.date}T${e.end}:00+09:00` }),
+    ...(e.open && { doorTime: `${e.date}T${e.open}:00+09:00` }),
+    eventStatus: "https://schema.org/EventScheduled",
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    location: VENUE,
+    ...(e.kind === "concert" && { performer: { "@type": "PerformingGroup", name: e.headline } }),
+    ...(e.organizer && { organizer: { "@type": "Organization", name: e.organizer } }),
+    ...(e.image && { image: e.image }),
+    ...(e.url && { url: e.url }),
+  }));
+  // "<" escaped so event text can't close the script element.
+  return data.length ? `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>` : "";
+}
+
+function seo(locale: Locale, date: string | undefined, title: string, description: string, events: BudokanEvent[]): string {
+  const alternates = LOCALES.map((l) => `<link rel="alternate" hreflang="${l}" href="${esc(pageUrl(l, date))}">`).join("\n");
+  const xDefault = `${SITE}/${date ? `?date=${date}` : ""}`;
+  return `<link rel="canonical" href="${esc(pageUrl(locale, date))}">
+${alternates}
+<link rel="alternate" hreflang="x-default" href="${esc(xDefault)}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="${esc(STRINGS[locale].brand)}">
+<meta property="og:title" content="${esc(title)}">
+<meta property="og:description" content="${esc(description)}">
+<meta property="og:url" content="${esc(pageUrl(locale, date))}">
+<meta property="og:image" content="${SITE}/icon-512.png">
+<meta property="og:locale" content="${OG_LOCALE[locale]}">
+<meta name="twitter:card" content="summary">
+${jsonLd(events)}`;
+}
+
 // ---- Mini calendar (wide screens) ---------------------------------------------------------
 function monthGrid(ym: string, byDate: Map<string, BudokanEvent[]>, selected: string, today: string, ctx: Ctx, nav?: { prev: string; next: string }): string {
   const first = utc(`${ym}-01`);
@@ -212,6 +262,8 @@ export function renderPage(
   const next = later[0];
   const updated = new Date(snap.updatedAt).toLocaleString(INTL_LOCALE[locale], { timeZone: "Asia/Tokyo", dateStyle: "medium", timeStyle: "short" });
   const label = isToday ? t.today : date === addDays(now.date, 1) ? t.tomorrow : date < now.date ? t.pastDay : t.upcoming;
+  const title = isToday ? t.brand : `${ctx.fullDate(date)} · ${t.brand}`;
+  const description = todays.length ? `${ctx.fullDate(date)}: ${todays.map((e) => e.headline).join(" / ")}. ${t.description}` : t.description;
   const link = (href: string, text: string) => `<a href="${href}">${text}</a>`;
 
   const hero = todays.length
@@ -228,8 +280,9 @@ export function renderPage(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>${t.brand}</title>
-<meta name="description" content="${esc(t.description)}">
+<title>${esc(title)}</title>
+<meta name="description" content="${esc(description)}">
+${seo(locale, isToday ? undefined : date, title, description, todays)}
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">

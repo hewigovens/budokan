@@ -38,11 +38,11 @@ Run `bun run typecheck && bun test` before finishing any change.
 | `src/merge.ts` | Dedupe the same show across sources |
 | `src/budo.ts` | Martial-arts schedule, hand-transcribed from the official yearly PDF |
 | `src/health.ts` | Staleness / source-failure / expiry checks |
-| `src/render.ts` | HTML rendering, CJK line breaking, mini calendar |
+| `src/render.ts` | HTML rendering, CJK line breaking, mini calendar, SEO tags + JSON-LD |
 | `src/styles.ts` | Page CSS and per-language font stacks |
 | `src/icons.ts` | Inline SVG icons (logo, sparkle, pin, globe) |
 | `src/i18n.ts` | UI strings for en, ja, zh-Hans, zh-Hant, ko |
-| `public/` | Static assets: icons, `manifest.webmanifest`, `sw.js` (network-first pages, cache-first icons) |
+| `public/` | Static assets: icons, `manifest.webmanifest`, `sw.js` (network-first pages, cache-first icons), `_headers`, `robots.txt`, `sitemap.xml` |
 | `.github/workflows/deploy.yml` | CI: typecheck + test on PRs and main; deploy on push to main |
 
 ## Data sources

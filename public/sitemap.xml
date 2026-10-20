@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://budokan.hewig.dev/?lang=en</loc>
+    <changefreq>daily</changefreq>
+    <xhtml:link rel="alternate" hreflang="en" href="https://budokan.hewig.dev/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://budokan.hewig.dev/?lang=ja"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://budokan.hewig.dev/?lang=zh-Hans"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://budokan.hewig.dev/?lang=zh-Hant"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://budokan.hewig.dev/?lang=ko"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://budokan.hewig.dev/"/>
+  </url>
+  <url>
+    <loc>https://budokan.hewig.dev/?lang=ja</loc>
+    <changefreq>daily</changefreq>
+    <xhtml:link rel="alternate" hreflang="en" href="https://budokan.hewig.dev/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://budokan.hewig.dev/?lang=ja"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://budokan.hewig.dev/?lang=zh-Hans"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://budokan.hewig.dev/?lang=zh-Hant"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://budokan.hewig.dev/?lang=ko"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://budokan.hewig.dev/"/>
+  </url>
+  <url>
+    <loc>https://budokan.hewig.dev/?lang=zh-Hans</loc>
+    <changefreq>daily</changefreq>
+    <xhtml:link rel="alternate" hreflang="en" href="https://budokan.hewig.dev/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://budokan.hewig.dev/?lang=ja"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://budokan.hewig.dev/?lang=zh-Hans"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://budokan.hewig.dev/?lang=zh-Hant"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://budokan.hewig.dev/?lang=ko"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://budokan.hewig.dev/"/>
+  </url>
+  <url>
+    <loc>https://budokan.hewig.dev/?lang=zh-Hant</loc>
+    <changefreq>daily</changefreq>
+    <xhtml:link rel="alternate" hreflang="en" href="https://budokan.hewig.dev/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://budokan.hewig.dev/?lang=ja"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://budokan.hewig.dev/?lang=zh-Hans"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://budokan.hewig.dev/?lang=zh-Hant"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://budokan.hewig.dev/?lang=ko"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://budokan.hewig.dev/"/>
+  </url>
+  <url>
+    <loc>https://budokan.hewig.dev/?lang=ko</loc>
+    <changefreq>daily</changefreq>
+    <xhtml:link rel="alternate" hreflang="en" href="https://budokan.hewig.dev/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://budokan.hewig.dev/?lang=ja"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://budokan.hewig.dev/?lang=zh-Hans"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://budokan.hewig.dev/?lang=zh-Hant"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://budokan.hewig.dev/?lang=ko"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://budokan.hewig.dev/"/>
+  </url>
+</urlset>
