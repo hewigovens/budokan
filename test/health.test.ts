@@ -7,7 +7,6 @@ const hoursAgo = (h: number) => new Date(NOW - h * 3600_000).toISOString();
 const snap = (over: Partial<Snapshot> = {}): Snapshot => ({
   updatedAt: hoursAgo(1),
   events: [],
-  errors: [],
   sources: [
     { name: "enjoy-live", ok: true, count: 40, checkedAt: hoursAgo(1), lastSuccessAt: hoursAgo(1) },
     { name: "eventernote", ok: true, count: 50, checkedAt: hoursAgo(1), lastSuccessAt: hoursAgo(1) },

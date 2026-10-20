@@ -22,7 +22,7 @@ test("cjk: breaks only at word boundaries, never inside numbers or before punctu
 test("renderPage localizes UI and tags event text as Japanese", () => {
   const snap: Snapshot = {
     updatedAt: "2026-10-20T00:00:00Z",
-    errors: [],
+    sources: [],
     events: [{ date: "2026-11-03", kind: "budo", headline: "第74回全日本剣道選手権大会・第65回全日本女子剣道選手権大会", sport: "Kendo", sources: [] }],
   };
   const now = { date: "2026-11-03", time: "10:00" };

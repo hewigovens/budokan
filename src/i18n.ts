@@ -2,6 +2,7 @@ export const LOCALES = ["en", "ja", "zh-Hans", "zh-Hant", "ko"] as const;
 export type Locale = (typeof LOCALES)[number];
 
 export const LOCALE_NAMES: Record<Locale, string> = { en: "English", ja: "日本語", "zh-Hans": "简体中文", "zh-Hant": "繁體中文", ko: "한국어" };
+export const SHORT_NAMES: Record<Locale, string> = { en: "EN", ja: "日本語", "zh-Hans": "简体", "zh-Hant": "繁體", ko: "한국어" };
 
 // Intl locale used for dates; en-GB gives "Tue 20 Oct".
 export const INTL_LOCALE: Record<Locale, string> = { en: "en-GB", ja: "ja-JP", "zh-Hans": "zh-Hans", "zh-Hant": "zh-Hant", ko: "ko-KR" };

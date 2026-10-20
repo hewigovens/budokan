@@ -27,6 +27,5 @@ export interface SourceStatus {
 export interface Snapshot {
   updatedAt: string;
   events: BudokanEvent[];
-  errors: string[];
-  sources?: SourceStatus[]; // absent in snapshots written before health tracking
+  sources: SourceStatus[];
 }

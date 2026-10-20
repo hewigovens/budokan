@@ -5,6 +5,8 @@
   "assets": { "directory": "./public" },
   "compatibility_date": "2026-09-01",
   "kv_namespaces": [{ "binding": "EVENTS", "id": "3ddb08717b7e4fcfb2a2d1317af9f688" }],
+  "workers_dev": true,
+  "routes": [{ "pattern": "budokan.hewig.dev", "custom_domain": true }],
   "triggers": { "crons": ["0 */6 * * *"] },
   "observability": { "enabled": true }
 }

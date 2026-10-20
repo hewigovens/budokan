@@ -24,7 +24,7 @@ export function checkHealth(snap: Snapshot, now: number, today: string): Health 
 
   if (ageHours > STALE_AFTER_H) problems.push(`Last refresh was ${Math.round(ageHours)}h ago; the cron trigger may not be running.`);
 
-  for (const s of snap.sources ?? []) {
+  for (const s of snap.sources) {
     if (s.ok) continue;
     const down = hoursSince(s.lastSuccessAt, now);
     const since = s.lastSuccessAt ? `last success ${Math.round(down)}h ago` : "no success on record";

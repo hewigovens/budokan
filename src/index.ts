@@ -1,4 +1,5 @@
 import { budoEvents } from "./budo";
+import { addDays, jstNow } from "./dates";
 import { checkHealth } from "./health";
 import { isLocale, pickLocale } from "./i18n";
 import { mergeEvents } from "./merge";
@@ -11,11 +12,6 @@ interface Env {
 }
 
 const KEY = "snapshot";
-
-export function jstNow(ms = Date.now()) {
-  const iso = new Date(ms + 9 * 3600_000).toISOString();
-  return { date: iso.slice(0, 10), time: iso.slice(11, 16) };
-}
 
 async function refresh(env: Env): Promise<Snapshot> {
   const today = jstNow().date;
@@ -49,7 +45,6 @@ async function refresh(env: Env): Promise<Snapshot> {
   const snapshot: Snapshot = {
     updatedAt: checkedAt,
     events: mergeEvents(budoEvents(), ...concerts).filter((e) => e.date >= addDays(today, -1)),
-    errors: sources.filter((s) => !s.ok).map((s) => `${s.name}: ${s.error}`),
     sources,
   };
   await env.EVENTS.put(KEY, JSON.stringify(snapshot));
@@ -57,14 +52,10 @@ async function refresh(env: Env): Promise<Snapshot> {
   return snapshot;
 }
 
-export function addDays(date: string, n: number): string {
-  const d = new Date(`${date}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-}
-
+// Refresh inline when KV is empty or holds a snapshot from before per-source status existed.
 async function load(env: Env): Promise<Snapshot> {
-  return (await env.EVENTS.get<Snapshot>(KEY, "json")) ?? refresh(env);
+  const snap = await env.EVENTS.get<Snapshot>(KEY, "json");
+  return snap?.sources ? snap : refresh(env);
 }
 
 export default {

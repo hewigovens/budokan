@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Budokan Today: a Cloudflare Worker that shows what's on at Nippon Budokan (日本武道館) today.
-Live at https://budokan-today.hewigovens.workers.dev.
+Live at https://budokan.hewig.dev (also https://budokan-today.hewigovens.workers.dev).
 
 ## Commands
 
@@ -12,7 +12,7 @@ bun run dev:lan      # same, reachable from a phone on the LAN
 curl localhost:8787/__scheduled   # run the cron refresh locally
 bun test             # parser, merge, i18n, health tests (fixtures in test/fixtures/)
 bun run typecheck    # tsc --noEmit
-bun run deploy       # wrangler deploy (ask the user before deploying)
+bun run deploy       # manual wrangler deploy (normally CI does this)
 bunx wrangler tail   # live logs from production
 ```
 
@@ -33,13 +33,17 @@ Run `bun run typecheck && bun test` before finishing any change.
 | Path | Purpose |
 |---|---|
 | `src/index.ts` | Routes, cron handler, refresh + fallback, locale pick |
+| `src/dates.ts` | JST date helpers (`jstNow`, `addDays`, `addMonths`) |
 | `src/scrape.ts` | enjoy-live.net and Eventernote fetch/parse (regex over HTML) |
 | `src/merge.ts` | Dedupe the same show across sources |
 | `src/budo.ts` | Martial-arts schedule, hand-transcribed from the official yearly PDF |
 | `src/health.ts` | Staleness / source-failure / expiry checks |
-| `src/render.ts` | HTML, CSS, CJK line breaking, mini calendar |
+| `src/render.ts` | HTML rendering, CJK line breaking, mini calendar |
+| `src/styles.ts` | Page CSS and per-language font stacks |
+| `src/icons.ts` | Inline SVG icons (logo, sparkle, pin, globe) |
 | `src/i18n.ts` | UI strings for en, ja, zh-Hans, zh-Hant, ko |
-| `public/sw.js` | Service worker: network-first pages/data, cache-first icons |
+| `public/` | Static assets: icons, `manifest.webmanifest`, `sw.js` (network-first pages, cache-first icons) |
+| `.github/workflows/deploy.yml` | CI: typecheck + test on PRs and main; deploy on push to main |
 
 ## Data sources
 
@@ -61,6 +65,12 @@ Run `bun run typecheck && bun test` before finishing any change.
 - Colors are CSS custom properties on `:root` with a dark-mode override; keep both in sync.
 - If you change cached assets in `public/`, bump `VERSION` in `public/sw.js`.
 
+## Deployment
+
+Pushing `main` to GitHub runs CI and deploys with `wrangler deploy` (needs the `CLOUDFLARE_API_TOKEN`
+secret and `CLOUDFLARE_ACCOUNT_ID` variable on the repo). The custom domain `budokan.hewig.dev` is declared
+in `wrangler.jsonc` under `routes`. KV and the cron trigger are also in `wrangler.jsonc`.
+
 ## Version control
 
 This repo uses [jj](https://jj-vcs.github.io/jj/) colocated with git; remote is
@@ -71,7 +81,7 @@ jj st                       # status
 jj describe -m "message"    # describe the working-copy change
 jj new                      # start the next change
 jj bookmark set main -r @-  # move main to the finished change
-jj git push --bookmark main
+jj git push --bookmark main  # this deploys to production via CI
 ```
 
-Don't push or deploy without the user asking.
+Pushing `main` deploys, so don't push or run `bun run deploy` without the user asking.
