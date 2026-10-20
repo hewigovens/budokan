@@ -184,17 +184,19 @@ function jsonLd(events: BudokanEvent[]): string {
   return data.length ? `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>` : "";
 }
 
-function seo(locale: Locale, date: string | undefined, title: string, description: string, events: BudokanEvent[]): string {
+// Without ?lang the page is language-negotiated, so it is the x-default URL and must canonicalize to itself.
+function seo(locale: Locale, date: string | undefined, langInUrl: boolean, title: string, description: string, events: BudokanEvent[]): string {
   const alternates = LOCALES.map((l) => `<link rel="alternate" hreflang="${l}" href="${esc(pageUrl(l, date))}">`).join("\n");
   const xDefault = `${SITE}/${date ? `?date=${date}` : ""}`;
-  return `<link rel="canonical" href="${esc(pageUrl(locale, date))}">
+  const self = langInUrl ? pageUrl(locale, date) : xDefault;
+  return `<link rel="canonical" href="${esc(self)}">
 ${alternates}
 <link rel="alternate" hreflang="x-default" href="${esc(xDefault)}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="${esc(STRINGS[locale].brand)}">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
-<meta property="og:url" content="${esc(pageUrl(locale, date))}">
+<meta property="og:url" content="${esc(self)}">
 <meta property="og:image" content="${SITE}/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -250,7 +252,7 @@ function calendar(events: BudokanEvent[], selected: string, today: string, ctx: 
 // ---- Page --------------------------------------------------------------------------------
 export function renderPage(
   snap: Snapshot,
-  opts: { date: string; now: { date: string; time: string }; locale?: Locale; health?: "ok" | "warning" | "error" },
+  opts: { date: string; now: { date: string; time: string }; locale?: Locale; langInUrl?: boolean; health?: "ok" | "warning" | "error" },
 ): string {
   const { date, now } = opts;
   const locale = opts.locale ?? "en";
@@ -286,7 +288,7 @@ export function renderPage(
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
-${seo(locale, isToday ? undefined : date, title, description, todays)}
+${seo(locale, isToday ? undefined : date, opts.langInUrl ?? false, title, description, todays)}
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">

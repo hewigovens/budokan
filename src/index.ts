@@ -78,7 +78,7 @@ export default {
         if (isLocale(langParam)) headers.append("set-cookie", `lang=${langParam}; Path=/; Max-Age=31536000; SameSite=Lax`);
         const snap = await load(env);
         const health = checkHealth(snap, Date.now(), now.date).status;
-        return new Response(renderPage(snap, { date, now, locale, health }), { headers });
+        return new Response(renderPage(snap, { date, now, locale, langInUrl: isLocale(langParam), health }), { headers });
       }
       case "/health": {
         const health = checkHealth(await load(env), Date.now(), jstNow().date);
