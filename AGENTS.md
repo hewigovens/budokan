@@ -63,8 +63,8 @@ Run `bun run typecheck && bun test` before finishing any change.
 - Event names are Japanese: render them with `cjk()` and `lang="ja"` so line breaks and glyphs are right.
 - Escape everything interpolated into HTML (`esc()` / `cjk()`).
 - Colors are CSS custom properties on `:root` with a dark-mode override; keep both in sync.
-- If you change cached assets in `public/`, bump `VERSION` in `public/sw.js`. Icons are served with a 1-year
-  immutable `Cache-Control` (`public/_headers`), so a changed icon needs a new filename.
+- If you change cached assets in `public/`, bump `VERSION` in `public/sw.js`. Icons and `og.png` are served with a 1-year
+  immutable `Cache-Control` (`public/_headers`), so a changed image needs a new filename.
 - Text must meet WCAG AA contrast (4.5:1) against `--bg` and `--card` in both themes; avoid `opacity` on text.
 
 ## Deployment

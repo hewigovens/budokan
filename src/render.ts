@@ -195,9 +195,12 @@ ${alternates}
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:url" content="${esc(pageUrl(locale, date))}">
-<meta property="og:image" content="${SITE}/icon-512.png">
+<meta property="og:image" content="${SITE}/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="${esc(STRINGS[locale].brand)}">
 <meta property="og:locale" content="${OG_LOCALE[locale]}">
-<meta name="twitter:card" content="summary">
+<meta name="twitter:card" content="summary_large_image">
 ${jsonLd(events)}`;
 }
 
