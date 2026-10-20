@@ -265,8 +265,9 @@ export function renderPage(
   const next = later[0];
   const updated = new Date(snap.updatedAt).toLocaleString(INTL_LOCALE[locale], { timeZone: "Asia/Tokyo", dateStyle: "medium", timeStyle: "short" });
   const label = isToday ? t.today : date === addDays(now.date, 1) ? t.tomorrow : date < now.date ? t.pastDay : t.upcoming;
-  const title = isToday ? t.brand : `${ctx.fullDate(date)} · ${t.brand}`;
-  const description = todays.length ? `${ctx.fullDate(date)}: ${todays.map((e) => e.headline).join(" / ")}. ${t.description}` : t.description;
+  const title = isToday ? t.metaTitle : t.metaDayTitle(ctx.fullDate(date));
+  const names = todays.map((e) => e.headline).join(" / ");
+  const description = todays.length ? t.metaDayDesc(ctx.fullDate(date), names) : isToday ? t.description : t.metaEmptyDesc(ctx.fullDate(date));
   const link = (href: string, text: string) => `<a href="${href}">${text}</a>`;
 
   const hero = todays.length

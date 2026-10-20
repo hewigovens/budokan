@@ -41,6 +41,11 @@ export interface Strings {
   updated: (when: string) => string;
   dataIssue: string;
   description: string;
+  // Search-facing <title>/description, phrased with the words people actually search for.
+  metaTitle: string;
+  metaDayTitle: (date: string) => string;
+  metaDayDesc: (date: string, names: string) => string;
+  metaEmptyDesc: (date: string) => string;
   sports: Record<string, string>;
   language: string;
   details: string;
@@ -91,6 +96,10 @@ const en: Strings = {
   updated: (w) => `Updated ${w} JST`,
   dataIssue: "Some sources failed to update",
   description: "What's on at Nippon Budokan today: concerts and martial-arts tournaments.",
+  metaTitle: "Budokan Today: Nippon Budokan concert & event schedule",
+  metaDayTitle: (date) => `Nippon Budokan on ${date}: what's on | Budokan Today`,
+  metaDayDesc: (date, names) => `At Nippon Budokan on ${date}: ${names}. Start times, details and the upcoming schedule.`,
+  metaEmptyDesc: (date) => `Nothing is scheduled at Nippon Budokan on ${date}. See upcoming concerts and martial-arts events.`,
   sports: {},
 };
 
@@ -133,6 +142,10 @@ const ja: Strings = {
   updated: (w) => `更新：${w}`,
   dataIssue: "一部のデータ更新に失敗しています",
   description: "日本武道館で今日開催されるコンサートや武道大会をチェック。",
+  metaTitle: "今日の武道館｜日本武道館のライブ・イベントスケジュール",
+  metaDayTitle: (date) => `${date}の日本武道館のイベント｜今日の武道館`,
+  metaDayDesc: (date, names) => `${date}の日本武道館：${names}。開演時間や今後のスケジュールもチェック。`,
+  metaEmptyDesc: (date) => `${date}の日本武道館は予定がありません。今後のライブや武道大会をチェック。`,
   sports: {
     Jukendo: "銃剣道", Kendo: "剣道", Judo: "柔道", Karate: "空手道", Aikido: "合気道", Kyudo: "弓道",
     "Shorinji Kempo": "少林寺拳法", Naginata: "なぎなた", Kobudo: "古武道", Calligraphy: "書道",
@@ -179,6 +192,10 @@ const zhHans: Strings = {
   updated: (w) => `更新于 ${w}（日本时间）`,
   dataIssue: "部分数据源更新失败",
   description: "查看日本武道馆今天的演唱会和武道比赛。",
+  metaTitle: "今日武道馆｜日本武道馆演唱会・活动日程",
+  metaDayTitle: (date) => `${date}日本武道馆活动｜今日武道馆`,
+  metaDayDesc: (date, names) => `${date}日本武道馆：${names}。查看开演时间和后续日程。`,
+  metaEmptyDesc: (date) => `${date}日本武道馆暂无活动。查看后续的演唱会和武道比赛。`,
   sports: {
     Jukendo: "铳剑道", Kendo: "剑道", Judo: "柔道", Karate: "空手道", Aikido: "合气道", Kyudo: "弓道",
     "Shorinji Kempo": "少林寺拳法", Naginata: "薙刀", Kobudo: "古武道", Calligraphy: "书法",
@@ -223,6 +240,10 @@ const zhHant: Strings = {
   updated: (w) => `更新於 ${w}（日本時間）`,
   dataIssue: "部分資料來源更新失敗",
   description: "查看日本武道館今天的演唱會和武道比賽。",
+  metaTitle: "今日武道館｜日本武道館演唱會・活動行程",
+  metaDayTitle: (date) => `${date}日本武道館活動｜今日武道館`,
+  metaDayDesc: (date, names) => `${date}日本武道館：${names}。查看開演時間和後續行程。`,
+  metaEmptyDesc: (date) => `${date}日本武道館暫無活動。查看後續的演唱會和武道比賽。`,
   sports: {
     Jukendo: "銃劍道", Kendo: "劍道", Judo: "柔道", Karate: "空手道", Aikido: "合氣道", Kyudo: "弓道",
     "Shorinji Kempo": "少林寺拳法", Naginata: "薙刀", Kobudo: "古武道", Calligraphy: "書法",
@@ -269,6 +290,10 @@ const ko: Strings = {
   updated: (w) => `업데이트: ${w} (일본 시간)`,
   dataIssue: "일부 데이터 업데이트 실패",
   description: "일본 부도칸에서 오늘 열리는 콘서트와 무도 대회를 확인하세요.",
+  metaTitle: "오늘의 부도칸 | 일본 부도칸 공연·이벤트 일정",
+  metaDayTitle: (date) => `${date} 일본 부도칸 공연·이벤트 | 오늘의 부도칸`,
+  metaDayDesc: (date, names) => `${date} 일본 부도칸: ${names}. 공연 시간과 앞으로의 일정도 확인하세요.`,
+  metaEmptyDesc: (date) => `${date} 일본 부도칸에는 예정된 행사가 없습니다. 앞으로의 공연과 무도 대회를 확인하세요.`,
   sports: {
     Jukendo: "총검도", Kendo: "검도", Judo: "유도", Karate: "가라테", Aikido: "합기도", Kyudo: "궁도",
     "Shorinji Kempo": "소림사권법", Naginata: "나기나타", Kobudo: "고무도", Calligraphy: "서예",
