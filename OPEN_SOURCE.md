@@ -1,6 +1,10 @@
 # Open-source publication gate
 
-Review date: 2026-10-24. **Keep PR #3 Draft and the repository Private. Do not merge or publish automatically.** MIT applies only to original material whose rights the contributor owns; it does not license third-party listings, schedules, images or historical fixtures.
+Review date: 2026-10-24. **PR #3 may proceed to code review at the owner's request. Keep the repository Private; do not merge or publish automatically.** MIT applies only to original material whose rights the contributor owns; it does not license third-party listings, schedules, images or historical fixtures.
+
+## Owner intent
+
+On 2026-10-24 the owner requested marking this PR ready for review and stated that the site is non-commercial, with disputed content to be taken down in response to rights concerns. README.md documents that policy and a contact route. This records operating intent, not confirmed third-party permission; the unresolved publication checks below remain open. Ready for review does not mean approved for publication.
 
 ## Verified
 
