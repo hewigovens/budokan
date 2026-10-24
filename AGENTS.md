@@ -24,7 +24,7 @@ Run `bun run typecheck && bun test` before finishing any change.
   martial-arts list, store one JSON snapshot in KV (`EVENTS`, key `snapshot`).
 - `GET /` reads the snapshot and renders HTML server-side (`src/render.ts`). No client framework; the only
   client JS is service-worker registration and the offline banner.
-- `GET /api/events` returns the snapshot. `GET /health` returns per-source status (503 on errors) for
+- `GET /api/events` returns public event fields without diagnostics or images. `GET /health` returns aggregate status (503 on errors) for
   uptime monitors.
 - Static files (icons, `manifest.webmanifest`, `sw.js`) are in `public/` and served by Workers assets.
 
@@ -47,13 +47,13 @@ Run `bun run typecheck && bun test` before finishing any change.
 
 ## Data sources
 
-- Concerts: `schedule.enjoy-live.net` (artist + tour name) and `eventernote.com` (times, images).
+- Concerts: `schedule.enjoy-live.net` (artist + tour name) and `eventernote.com` (times).
   Budokan's official site does not publish concerts.
 - Martial arts: `https://www.nipponbudokan.or.jp/shinkoujigyou/gyouji_08` links a yearly PDF. Each April,
   transcribe the new PDF into `src/budo.ts` and bump `BUDO_VALID_UNTIL`. `/health` errors once it expires.
-- A source returning 0 events is treated as a failure (layout change). If a parser breaks, save a fresh copy
-  of the page to `test/fixtures/` and fix the regex in `src/scrape.ts` against it.
-- Keep subrequests per refresh under 50 (Workers free plan); see the image HEAD-check cap in `scrape.ts`.
+- A source returning 0 events is treated as a failure (layout change). If a parser breaks, reproduce the relevant structure with fictional entries
+  in `test/fixtures/`; do not commit downloaded pages, CSRF values, or third-party artwork.
+- Keep subrequests per refresh under 50 (Workers free plan); image requests are disabled pending rights clearance.
 
 ## Conventions
 

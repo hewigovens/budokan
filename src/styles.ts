@@ -47,8 +47,7 @@ html[lang="en"] .daynav .label,html[lang="en"] .section{text-transform:uppercase
 .daynav .date{display:block;font-size:clamp(20px,6vw,26px);font-weight:700;letter-spacing:-.01em;white-space:nowrap}
 .daynav a{flex:none;width:48px;height:48px;display:grid;place-items:center;font-size:30px;text-decoration:none;border-radius:50%;color:var(--muted)}
 .daynav a:active{background:var(--card)}
-.hero-card{display:flex;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;text-decoration:none;margin-bottom:10px;border-left:5px solid var(--live)}
-.hero-card.budo{border-left-color:var(--budo)}
+.hero-card{display:flex;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;text-decoration:none;margin-bottom:10px}
 .hero-card img{width:96px;height:96px;border-radius:12px;object-fit:cover;flex:none}
 .hero-body{min-width:0;flex:1}
 .hero-card h2{margin:6px 0 4px;font-size:clamp(20px,5.6vw,25px);line-height:1.35;letter-spacing:-.01em;text-wrap:pretty}
@@ -130,3 +129,4 @@ footer .warn{color:var(--budo)}
   .day{width:34px}
 }
 `;
+

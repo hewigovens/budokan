@@ -82,10 +82,15 @@ export default {
       }
       case "/health": {
         const health = checkHealth(await load(env), Date.now(), jstNow().date);
-        return Response.json(health, { status: health.status === "error" ? 503 : 200, headers: { "cache-control": "no-store" } });
+        return Response.json({ status: health.status, updatedAt: health.updatedAt }, { status: health.status === "error" ? 503 : 200, headers: { "cache-control": "no-store" } });
       }
-      case "/api/events":
-        return Response.json(await load(env), { headers: { "access-control-allow-origin": "*", "cache-control": "public, max-age=300" } });
+      case "/api/events": {
+        const snap = await load(env);
+        // Public data is deliberate; internal diagnostics and unlicensed images are not.
+        const events = snap.events.map(({ date, kind, headline, title, sport, organizer, open, start, end, url, sources }) =>
+          ({ date, kind, headline, title, sport, organizer, open, start, end, url, sources }));
+        return Response.json({ updatedAt: snap.updatedAt, events }, { headers: { "access-control-allow-origin": "*", "cache-control": "public, max-age=300" } });
+      }
       default:
         return new Response("Not found", { status: 404 });
     }
@@ -94,3 +99,4 @@ export default {
     ctx.waitUntil(refresh(env));
   },
 } satisfies ExportedHandler<Env>;
+

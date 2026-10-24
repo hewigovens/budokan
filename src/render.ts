@@ -100,7 +100,6 @@ function heroCard(ev: BudokanEvent, ctx: Ctx, nowTime?: string): string {
   const st = nowTime ? status(ev, nowTime, ctx.t) : undefined;
   const sub = subtitleOf(ev);
   return `<article class="hero-card ${ev.kind}">
-  ${ev.image ? `<img src="${esc(ev.image)}" alt="" loading="lazy" width="96" height="96">` : ""}
   <div class="hero-body">
     <div class="meta">${badge(ev, ctx)}${st ? `<span class="status ${st.tone}">${esc(st.label)}</span>` : ""}</div>
     <h2 lang="ja">${headline(ev)}</h2>
@@ -177,7 +176,6 @@ function jsonLd(events: BudokanEvent[]): string {
     location: VENUE,
     ...(e.kind === "concert" && { performer: { "@type": "PerformingGroup", name: e.headline } }),
     ...(e.organizer && { organizer: { "@type": "Organization", name: e.organizer } }),
-    ...(e.image && { image: e.image }),
     ...(e.url && { url: e.url }),
   }));
   // "<" escaped so event text can't close the script element.
@@ -351,4 +349,5 @@ sync();
 </body>
 </html>`;
 }
+
 
