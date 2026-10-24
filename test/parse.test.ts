@@ -8,18 +8,20 @@ const fixture = (name: string) => readFileSync(`${import.meta.dir}/fixtures/${na
 
 test("enjoy-live parses dated concerts", () => {
   const evs = parseEnjoyLive(fixture("enjoylive.html"));
-  expect(evs.length).toBeGreaterThan(20);
-  expect(evs[0]).toMatchObject({ date: "2026-10-01", headline: "SHOW-WA", title: "2026 日本武道館コンサート" });
-  expect(evs.find((e) => e.date === "2026-10-05")?.headline).toBe("超ときめき♡宣伝部");
+  expect(evs.length).toBe(3);
+  expect(evs[0]).toMatchObject({ date: "2026-10-01", headline: "Example & Friends", title: "Sample Tour" });
+  expect(evs.find((e) => e.date === "2026-10-05")?.headline).toBe("Example ♡ Group");
   expect(evs.every((e) => /^\d{4}-\d{2}-\d{2}$/.test(e.date))).toBe(true);
 });
 
-test("eventernote parses times, actors and images", () => {
+test("eventernote parses times and actors but ignores images", () => {
   const evs = parseEventernote(fixture("eventernote.html"));
-  expect(evs).toHaveLength(30);
+  expect(evs).toHaveLength(3);
   const band = evs.find((e) => e.date === "2026-11-13")!;
-  expect(band).toMatchObject({ headline: "BAND-MAID", open: "17:00", start: "18:00", end: "21:00" });
-  expect(band.image).toStartWith("https://eventernote");
+  expect(band).toMatchObject({ headline: "Example Band", open: "17:00", start: "18:00", end: "21:00" });
+  expect(band.image).toBeUndefined();
+  expect(evs[1]).toMatchObject({ headline: "One、Two、Three ほか", start: "18:30" });
+  expect(evs[2].headline).toBe("Example Solo");
 });
 
 test("merge dedupes the same show across sources", () => {
@@ -39,3 +41,4 @@ test("budo schedule and sport tagging", () => {
 test("decode handles entities", () => {
   expect(decode("it&rsquo;s &amp; &#x2661; <b>x</b>")).toBe("it’s & ♡ x");
 });
+

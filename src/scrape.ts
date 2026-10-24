@@ -59,7 +59,6 @@ export function parseEventernote(html: string): BudokanEvent[] {
       open: times?.[1],
       start: times?.[2],
       end: times?.[3],
-      image: li.match(/<img src="(https:\/\/eventernote[^"]+)"/)?.[1],
       url: `https://www.eventernote.com${link[1]}`,
       sources: ["eventernote.com"],
     });
@@ -77,17 +76,6 @@ export async function fetchEnjoyLive(): Promise<BudokanEvent[]> {
   return parseEnjoyLive(await get(ENJOY_URL));
 }
 
-// Some eventernote events carry a tiny blank placeholder (~500 bytes); drop those.
-async function dropBlankImages(events: BudokanEvent[]): Promise<void> {
-  await Promise.all(
-    events.map(async (ev) => {
-      if (!ev.image) return;
-      const res = await fetch(ev.image, { method: "HEAD" }).catch(() => undefined);
-      if (!res?.ok || Number(res.headers.get("content-length") ?? 0) < 2000) ev.image = undefined;
-    }),
-  );
-}
-
 // Eventernote lists newest-first; keep paging until we reach the past.
 export async function fetchEventernote(today: string, maxPages = 5): Promise<BudokanEvent[]> {
   const all: BudokanEvent[] = [];
@@ -97,9 +85,5 @@ export async function fetchEventernote(today: string, maxPages = 5): Promise<Bud
     if (!batch.length || batch[batch.length - 1].date < today) break;
   }
   const upcoming = all.filter((e) => e.date >= today);
-  // Images only show on the day's hero card, so check the nearest ones and stay under the
-  // Workers free-plan limit of 50 subrequests per invocation.
-  await dropBlankImages(upcoming.slice(-25));
-  upcoming.slice(0, -25).forEach((e) => (e.image = undefined));
   return upcoming;
 }
