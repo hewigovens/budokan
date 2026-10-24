@@ -3,6 +3,11 @@
 
 export const utc = (date: string) => new Date(`${date}T00:00:00Z`);
 
+export function minutesSinceMidnight(time: string): number {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
 export function jstNow(ms = Date.now()) {
   const iso = new Date(ms + 9 * 3600_000).toISOString();
   return { date: iso.slice(0, 10), time: iso.slice(11, 16) };

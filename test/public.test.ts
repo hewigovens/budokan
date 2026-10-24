@@ -12,7 +12,11 @@ function snapshot(ok: boolean): Snapshot {
   };
 }
 async function request(path: string, ok = true) {
-  const env = { EVENTS: { get: async () => snapshot(ok) } as unknown as KVNamespace };
+  const data = new Map<string, Snapshot>([["snapshot", snapshot(ok)]]);
+  const env = { EVENTS: {
+    get: async (key: string) => data.get(key) ?? null,
+    put: async (key: string, value: string) => { data.set(key, JSON.parse(value)); },
+  } as unknown as KVNamespace };
   return worker.fetch(new Request(`https://example.test${path}`), env);
 }
 

@@ -9,6 +9,11 @@ What's on at Nippon Budokan (日本武道館) today: concerts and martial-arts t
 - Martial-arts events come from the official Budokan yearly schedule (updated by hand each April).
 - `/api/events` serves the data as JSON; `/health` reports aggregate status (503 when data is stale or a
   source has been failing for a day), suitable for an uptime monitor.
+- Each event has a permanent `/events/<id>/` page with event structured data. IDs and past events
+  are retained in KV when the rolling schedule changes. The homepage describes the schedule;
+  `/sitemap-events.xml` lists the event pages in all five languages.
+- Event pages include known times and organizers; third-party images remain disabled. Unknown optional details, including
+  ticket prices, are omitted, so some non-critical Search Console suggestions may remain.
 
 ```sh
 bun install

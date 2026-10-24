@@ -24,6 +24,9 @@ Run `bun run typecheck && bun test` before finishing any change.
   martial-arts list, store one JSON snapshot in KV (`EVENTS`, key `snapshot`).
 - `GET /` reads the snapshot and renders HTML server-side (`src/render.ts`). No client framework; the only
   client JS is service-worker registration and the offline banner.
+- Each refresh assigns stable event IDs and stores all published records in KV (`event-archive`).
+  `GET /events/<id>/` serves one event, including after it leaves the rolling snapshot. Existing snapshots
+  migrate on first read. `GET /sitemap-events.xml` lists event pages in all five locales.
 - `GET /api/events` returns public event fields without diagnostics or images. `GET /health` returns aggregate status (503 on errors) for
   uptime monitors.
 - Static files (icons, `manifest.webmanifest`, `sw.js`) are in `public/` and served by Workers assets.
@@ -35,10 +38,15 @@ Run `bun run typecheck && bun test` before finishing any change.
 | `src/index.ts` | Routes, cron handler, refresh + fallback, locale pick |
 | `src/dates.ts` | JST date helpers (`jstNow`, `addDays`, `addMonths`) |
 | `src/scrape.ts` | enjoy-live.net and Eventernote fetch/parse (regex over HTML) |
-| `src/merge.ts` | Dedupe the same show across sources |
+| `src/merge.ts` | Combine source details and sort the schedule |
+| `src/events.ts` | Event names, matching, stable identity and archive reconciliation |
+| `src/html.ts` | Shared HTML escaping |
+| `src/urls.ts` | Canonical site, event paths and localized URLs |
+| `src/sitemap.ts` | Dynamic sitemap for archived event pages |
 | `src/budo.ts` | Martial-arts schedule, hand-transcribed from the official yearly PDF |
 | `src/health.ts` | Staleness / source-failure / expiry checks |
-| `src/render.ts` | HTML rendering, CJK line breaking, mini calendar, SEO tags + JSON-LD |
+| `src/render.ts` | HTML rendering, CJK line breaking and mini calendar |
+| `src/seo.ts` | Canonical URLs, language alternates, share tags and JSON-LD |
 | `src/styles.ts` | Page CSS and per-language font stacks |
 | `src/icons.ts` | Inline SVG icons (logo, sparkle, pin, globe) |
 | `src/i18n.ts` | UI strings for en, ja, zh-Hans, zh-Hant, ko |

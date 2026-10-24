@@ -2,7 +2,7 @@ import type { BudokanEvent } from "./types";
 
 // Transcribed from the official 令和8年度 日本武道館大道場利用日程 (as of 2026-04-01):
 // https://www.nipponbudokan.or.jp/pdf/shinkoujigyou/sched_R8/r8_sched.pdf
-// The venue only publishes martial-arts events, once a year, as a PDF. Update each April.
+// The annual non-concert schedule is published as a PDF. Update each April.
 const FY2026: [dates: string[], name: string, organizer: string][] = [
   [["2026-04-12"], "第61回関東小学生剣道錬成大会", "東京都少年剣道研究会"],
   [["2026-04-19"], "第70回全日本銃剣道優勝大会", "全日本銃剣道連盟"],

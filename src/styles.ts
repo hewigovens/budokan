@@ -17,7 +17,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 ${FONT_LATIN}
 :lang(zh-Hant){font-family:${FONT_LATIN},${FONT_TC},sans-serif}
 :lang(ko){font-family:${FONT_LATIN},${FONT_KR},sans-serif}
 :lang(ja),:lang(zh),:lang(ko){line-break:strict}
-.hero-card h2,.hero-card .sub,.hero-card .org,.name,.what .sub,.next [lang]{word-break:keep-all;overflow-wrap:anywhere}
+.hero-card h1,.hero-card h2,.hero-card .sub,.hero-card .org,.name,.what .sub,.next [lang]{word-break:keep-all;overflow-wrap:anywhere}
 :lang(ko){word-break:keep-all}
 .page{max-width:1080px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(40px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
 main,.top{max-width:640px;margin-left:auto;margin-right:auto}
@@ -47,10 +47,12 @@ html[lang="en"] .daynav .label,html[lang="en"] .section{text-transform:uppercase
 .daynav .date{display:block;font-size:clamp(20px,6vw,26px);font-weight:700;letter-spacing:-.01em;white-space:nowrap}
 .daynav a{flex:none;width:48px;height:48px;display:grid;place-items:center;font-size:30px;text-decoration:none;border-radius:50%;color:var(--muted)}
 .daynav a:active{background:var(--card)}
-.hero-card{display:flex;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;text-decoration:none;margin-bottom:10px}
+.hero-card{display:flex;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:10px}
 .hero-card img{width:96px;height:96px;border-radius:12px;object-fit:cover;flex:none}
 .hero-body{min-width:0;flex:1}
-.hero-card h2{margin:6px 0 4px;font-size:clamp(20px,5.6vw,25px);line-height:1.35;letter-spacing:-.01em;text-wrap:pretty}
+.hero-card h1,.hero-card h2{margin:6px 0 4px;font-size:clamp(20px,5.6vw,25px);line-height:1.35;letter-spacing:-.01em;text-wrap:pretty}
+.hero-card h2 a{text-decoration:none}
+.hero-card h2 a:hover{text-decoration:underline}
 .line{display:block}
 .hero-card .sub{margin:0 0 8px;color:var(--muted);text-wrap:pretty}
 .hero-card .times{margin:0;font-weight:600;font-variant-numeric:tabular-nums}
@@ -74,6 +76,12 @@ html[lang="en"] .badge,html[lang="en"] .status{text-transform:uppercase;letter-s
 .empty p{margin:0;color:var(--muted)}
 .empty .next{margin-top:12px;color:var(--ink)}
 .back{display:inline-block;padding:8px 0;font-size:14px;color:var(--gold)}
+.event-page{max-width:720px}
+.event-page .layout{display:block}
+.event-date{margin:12px 0;font-size:20px;font-weight:600}
+.event-description{margin:20px 0 12px}
+.event-venue{display:flex;align-items:baseline;gap:6px;font-size:14px;color:var(--muted)}
+.event-venue svg{width:16px;height:16px;flex:none;align-self:center}
 .section{font-size:13px;letter-spacing:.06em;color:var(--muted);margin:32px 0 0}
 .upcoming h3{font-size:15px;margin:22px 0 6px;color:var(--gold)}
 .list{list-style:none;margin:0;padding:0;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
@@ -109,7 +117,7 @@ footer .warn{color:var(--budo)}
 .cell:hover{background:var(--bg)}
 .cell.past{color:var(--muted)}
 .cell.today{box-shadow:inset 0 0 0 1.5px var(--gold);font-weight:700}
-.cell.sel{background:var(--ink);color:var(--bg);opacity:1}
+.cell.sel{background:var(--ink);color:var(--bg)}
 .cell i{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:var(--live)}
 .cell.has-budo i{background:var(--budo)}
 .cell.has-concert.has-budo i{background:linear-gradient(90deg,var(--live) 50%,var(--budo) 50%)}

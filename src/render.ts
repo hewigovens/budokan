@@ -1,12 +1,13 @@
-import { addDays, addMonths, utc } from "./dates";
+import { addDays, addMonths, minutesSinceMidnight, utc } from "./dates";
 import { GOOGLE_HL, INTL_LOCALE, LOCALE_NAMES, LOCALES, OFFICIAL_LINK_TEXT, SHORT_NAMES, STRINGS, type Locale, type Strings } from "./i18n";
 import { GLOBE, LOGO, PIN, SPARKLE } from "./icons";
 import { CSS } from "./styles";
-import type { BudokanEvent, Snapshot } from "./types";
+import type { BudokanEvent, PublishedEvent, Snapshot } from "./types";
+import { eventName, eventSubtitle } from "./events";
+import { esc } from "./html";
+import { renderSeo } from "./seo";
+import { eventPath, pagePath } from "./urls";
 
-const esc = (s = "") => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-
-// ---- CJK line breaking -------------------------------------------------------------------
 // Browsers break CJK text between any two characters, so 選手権大会 can end up as 選手権大 / 会.
 // We render CJK runs with `word-break: keep-all` and add <wbr> only at word boundaries found
 // by Intl.Segmenter, skipping spots that would orphan punctuation, small kana or numbers.
@@ -42,12 +43,6 @@ function headline(ev: BudokanEvent): string {
 
 const fmt = (locale: Locale, opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(INTL_LOCALE[locale], { timeZone: "UTC", ...opts });
 
-const mins = (t: string) => {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-};
-
-// ---- Pieces ------------------------------------------------------------------------------
 interface Ctx {
   locale: Locale;
   t: Strings;
@@ -55,58 +50,71 @@ interface Ctx {
   fullDate: (date: string) => string;
 }
 
+interface PageOptions {
+  date: string;
+  now: { date: string; time: string };
+  locale?: Locale;
+  langInUrl?: boolean;
+  health?: "ok" | "warning" | "error";
+  event?: PublishedEvent;
+}
+
 // Google AI Mode is the udm=50 search vertical.
 const aiModeUrl = (prompt: string, locale: Locale) =>
   `https://www.google.com/search?udm=50&hl=${GOOGLE_HL[locale]}&q=${encodeURIComponent(prompt)}`;
 
 function askAboutEvent(ev: BudokanEvent, ctx: Ctx): string {
-  const name = [ev.headline, subtitleOf(ev)].filter(Boolean).join(" ");
-  return aiModeUrl(ctx.t.askAIAbout(name, ctx.fullDate(ev.date)), ctx.locale);
+  return aiModeUrl(ctx.t.askAIAbout(eventName(ev), ctx.fullDate(ev.date)), ctx.locale);
 }
 
 type Status = { label: string; tone: "live" | "soon" | "done" };
 
 function status(ev: BudokanEvent, nowTime: string, t: Strings): Status | undefined {
   if (!ev.start) return undefined;
-  const now = mins(nowTime);
-  const open = ev.open ? mins(ev.open) : mins(ev.start) - 60;
-  const start = mins(ev.start);
-  const end = ev.end ? mins(ev.end) : start + 180;
+  const now = minutesSinceMidnight(nowTime);
+  const start = minutesSinceMidnight(ev.start);
+  const open = ev.open ? minutesSinceMidnight(ev.open) : start - 60;
+  const end = ev.end ? minutesSinceMidnight(ev.end) : start + 180;
   if (now >= end) return { label: t.statusFinished, tone: "done" };
   if (now >= start) return { label: t.statusOnNow, tone: "live" };
   if (now >= open) return { label: t.statusDoorsOpen, tone: "soon" };
   return { label: ev.open ? t.statusDoorsAt(ev.open) : t.statusDoorsAt("TBA"), tone: "soon" };
 }
 
-function badge(ev: BudokanEvent, { t }: Ctx): string {
-  if (ev.kind === "concert") return `<span class="badge concert">${t.live}</span>`;
+function categoryOf(ev: BudokanEvent, t: Strings): string {
+  if (ev.kind === "concert") return t.live;
   const sport = ev.sport ?? "Martial arts";
-  return `<span class="badge budo">${esc(t.sports[sport] ?? sport)}</span>`;
+  return t.sports[sport] ?? sport;
+}
+
+function badge(ev: BudokanEvent, { t }: Ctx): string {
+  return `<span class="badge ${ev.kind}">${esc(categoryOf(ev, t))}</span>`;
 }
 
 // Each chunk stays on one line so "Ends 21:00" never splits.
 function times(ev: BudokanEvent, { t }: Ctx): string {
   if (ev.kind === "budo" && !ev.start) return `<span class="chunk">${t.daytime}</span>`;
-  const bits = [ev.open && t.doors(ev.open), ev.start && t.start(ev.start), ev.end && t.ends(ev.end)].filter(Boolean) as string[];
+  const bits = [ev.open && t.doors(ev.open), ev.start && t.start(ev.start), ev.end && t.ends(ev.end)].filter((bit): bit is string => !!bit);
   // The separator sits at the end of the previous chunk so a wrapped line never starts with "·".
   return bits.length
     ? bits.map((b, i) => `<span class="chunk">${esc(b)}${i < bits.length - 1 ? " ·" : ""}</span>`).join(" ")
     : `<span class="chunk">${t.timesTBA}</span>`;
 }
 
-const subtitleOf = (ev: BudokanEvent) => (ev.title && ev.title !== ev.headline ? ev.title : "");
-
-function heroCard(ev: BudokanEvent, ctx: Ctx, nowTime?: string): string {
+function heroCard(ev: BudokanEvent, ctx: Ctx, nowTime?: string, detail = false): string {
   const st = nowTime ? status(ev, nowTime, ctx.t) : undefined;
-  const sub = subtitleOf(ev);
+  const sub = eventSubtitle(ev);
+  const heading = detail ? "h1" : "h2";
+  const eventUrl = ev.id ? pagePath(eventPath(ev.id), ctx.locale) : undefined;
   return `<article class="hero-card ${ev.kind}">
   <div class="hero-body">
     <div class="meta">${badge(ev, ctx)}${st ? `<span class="status ${st.tone}">${esc(st.label)}</span>` : ""}</div>
-    <h2 lang="ja">${headline(ev)}</h2>
+    <${heading} lang="ja">${!detail && eventUrl ? `<a href="${esc(eventUrl)}">${headline(ev)}</a>` : headline(ev)}</${heading}>
     ${sub ? `<p class="sub" lang="ja">${cjk(sub)}</p>` : ""}
     <p class="times">${times(ev, ctx)}</p>
     ${ev.organizer ? `<p class="org" lang="ja">${cjk(ev.organizer)}</p>` : ""}
     <div class="actions">
+      ${!detail && eventUrl ? `<a class="btn" href="${esc(eventUrl)}">${ctx.t.eventDetails}</a>` : ""}
       <a class="btn ai" href="${esc(askAboutEvent(ev, ctx))}" target="_blank" rel="noopener">${SPARKLE}${ctx.t.askAI}</a>
       ${ev.url ? `<a class="btn" href="${esc(ev.url)}" target="_blank" rel="noopener">${ctx.t.details} ↗</a>` : ""}
     </div>
@@ -117,8 +125,9 @@ function heroCard(ev: BudokanEvent, ctx: Ctx, nowTime?: string): string {
 function row(ev: BudokanEvent, ctx: Ctx): string {
   const d = utc(ev.date);
   const weekend = d.getUTCDay() === 0 || d.getUTCDay() === 6 ? " weekend" : "";
-  const sub = subtitleOf(ev);
-  return `<li><a class="row-link" href="${esc(ev.url)}" target="_blank" rel="noopener">
+  const sub = eventSubtitle(ev);
+  const href = ev.id ? pagePath(eventPath(ev.id), ctx.locale) : ev.url;
+  return `<li><a class="row-link" href="${esc(href)}"${ev.id ? "" : ' target="_blank" rel="noopener"'}>
   <span class="day${weekend}"><b>${d.getUTCDate()}</b>${esc(fmt(ctx.locale, { weekday: "short" }).format(d))}</span>
   <span class="what"><span class="name" lang="ja">${headline(ev)}</span>${sub ? `<span class="sub" lang="ja">${cjk(sub)}</span>` : ""}<span class="small">${badge(ev, ctx)} ${times(ev, ctx)}</span></span>
 </a><a class="ask" href="${esc(askAboutEvent(ev, ctx))}" target="_blank" rel="noopener" title="${esc(ctx.t.askAI)}" aria-label="${esc(ctx.t.askAI)}">${SPARKLE}</a></li>`;
@@ -139,10 +148,9 @@ function upcoming(events: BudokanEvent[], ctx: Ctx): string {
   return html + (month ? "</ul>" : "");
 }
 
-// A <details> dropdown works without any JavaScript.
-function langSwitcher(current: Locale, date: string, isToday: boolean, t: Strings): string {
+function langSwitcher(current: Locale, t: Strings, path: string, date?: string): string {
   const items = LOCALES.map((l) => {
-    const href = `/?lang=${l}${isToday ? "" : `&amp;date=${date}`}`;
+    const href = esc(pagePath(path, l, date));
     return l === current
       ? `<span aria-current="true" lang="${l}">${LOCALE_NAMES[l]} ✓</span>`
       : `<a href="${href}" lang="${l}" hreflang="${l}">${LOCALE_NAMES[l]}</a>`;
@@ -150,61 +158,6 @@ function langSwitcher(current: Locale, date: string, isToday: boolean, t: String
   return `<details class="lang"><summary aria-label="${t.language}">${GLOBE}<span>${SHORT_NAMES[current]}</span></summary><div class="menu">${items}</div></details>`;
 }
 
-// ---- SEO ---------------------------------------------------------------------------------
-const SITE = "https://budokan.hewig.dev";
-const VENUE = {
-  "@type": "Place",
-  name: "日本武道館 (Nippon Budokan)",
-  address: { "@type": "PostalAddress", streetAddress: "北の丸公園2-3", addressLocality: "千代田区", addressRegion: "東京都", postalCode: "102-8321", addressCountry: "JP" },
-  geo: { "@type": "GeoCoordinates", latitude: 35.6933, longitude: 139.7499 },
-};
-
-const OG_LOCALE: Record<Locale, string> = { en: "en_GB", ja: "ja_JP", "zh-Hans": "zh_CN", "zh-Hant": "zh_TW", ko: "ko_KR" };
-
-const pageUrl = (locale: Locale, date?: string) => `${SITE}/?lang=${locale}${date ? `&date=${date}` : ""}`;
-
-function jsonLd(events: BudokanEvent[]): string {
-  const data = events.map((e) => ({
-    "@context": "https://schema.org",
-    "@type": e.kind === "budo" ? "SportsEvent" : "MusicEvent",
-    name: e.title && e.title !== e.headline ? `${e.headline} ${e.title}` : e.headline,
-    startDate: e.start ? `${e.date}T${e.start}:00+09:00` : e.date,
-    ...(e.end && { endDate: `${e.date}T${e.end}:00+09:00` }),
-    ...(e.open && { doorTime: `${e.date}T${e.open}:00+09:00` }),
-    eventStatus: "https://schema.org/EventScheduled",
-    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-    location: VENUE,
-    ...(e.kind === "concert" && { performer: { "@type": "PerformingGroup", name: e.headline } }),
-    ...(e.organizer && { organizer: { "@type": "Organization", name: e.organizer } }),
-    ...(e.url && { url: e.url }),
-  }));
-  // "<" escaped so event text can't close the script element.
-  return data.length ? `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>` : "";
-}
-
-// Without ?lang the page is language-negotiated, so it is the x-default URL and must canonicalize to itself.
-function seo(locale: Locale, date: string | undefined, langInUrl: boolean, title: string, description: string, events: BudokanEvent[]): string {
-  const alternates = LOCALES.map((l) => `<link rel="alternate" hreflang="${l}" href="${esc(pageUrl(l, date))}">`).join("\n");
-  const xDefault = `${SITE}/${date ? `?date=${date}` : ""}`;
-  const self = langInUrl ? pageUrl(locale, date) : xDefault;
-  return `<link rel="canonical" href="${esc(self)}">
-${alternates}
-<link rel="alternate" hreflang="x-default" href="${esc(xDefault)}">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="${esc(STRINGS[locale].brand)}">
-<meta property="og:title" content="${esc(title)}">
-<meta property="og:description" content="${esc(description)}">
-<meta property="og:url" content="${esc(self)}">
-<meta property="og:image" content="${SITE}/og.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="${esc(STRINGS[locale].brand)}">
-<meta property="og:locale" content="${OG_LOCALE[locale]}">
-<meta name="twitter:card" content="summary_large_image">
-${jsonLd(events)}`;
-}
-
-// ---- Mini calendar (wide screens) ---------------------------------------------------------
 function monthGrid(ym: string, byDate: Map<string, BudokanEvent[]>, selected: string, today: string, ctx: Ctx, nav?: { prev: string; next: string }): string {
   const first = utc(`${ym}-01`);
   const daysInMonth = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
@@ -247,12 +200,9 @@ function calendar(events: BudokanEvent[], selected: string, today: string, ctx: 
   </aside>`;
 }
 
-// ---- Page --------------------------------------------------------------------------------
-export function renderPage(
-  snap: Snapshot,
-  opts: { date: string; now: { date: string; time: string }; locale?: Locale; langInUrl?: boolean; health?: "ok" | "warning" | "error" },
-): string {
+export function renderPage(snap: Snapshot, opts: PageOptions): string {
   const { date, now } = opts;
+  const event = opts.event;
   const locale = opts.locale ?? "en";
   const t = STRINGS[locale];
   const longFmt = fmt(locale, { weekday: "short", month: "short", day: "numeric" });
@@ -260,18 +210,25 @@ export function renderPage(
   const ctx: Ctx = { locale, t, longDate: (d) => longFmt.format(utc(d)), fullDate: (d) => fullFmt.format(utc(d)) };
 
   const isToday = date === now.date;
-  const todays = snap.events.filter((e) => e.date === date);
-  const later = snap.events.filter((e) => e.date > date);
+  const todays = event ? [event] : snap.events.filter((e) => e.date === date);
+  const later = event ? [] : snap.events.filter((e) => e.date > date);
   const next = later[0];
   const updated = new Date(snap.updatedAt).toLocaleString(INTL_LOCALE[locale], { timeZone: "Asia/Tokyo", dateStyle: "medium", timeStyle: "short" });
   const label = isToday ? t.today : date === addDays(now.date, 1) ? t.tomorrow : date < now.date ? t.pastDay : t.upcoming;
-  const title = isToday ? t.metaTitle : t.metaDayTitle(ctx.fullDate(date));
-  const names = todays.map((e) => e.headline).join(" / ");
-  const description = todays.length ? t.metaDayDesc(ctx.fullDate(date), names) : isToday ? t.description : t.metaEmptyDesc(ctx.fullDate(date));
+  const path = event ? eventPath(event.id) : "/";
+  const pageDate = event || isToday ? undefined : date;
+  let title = isToday ? t.metaTitle : t.metaDayTitle(ctx.fullDate(date));
+  let description = isToday ? t.description : t.metaEmptyDesc(ctx.fullDate(date));
+  if (event) {
+    title = `${eventName(event)} | ${t.brand}`;
+    description = t.eventDescription(eventName(event), categoryOf(event, t));
+  } else if (todays.length) {
+    description = t.metaDayDesc(ctx.fullDate(date), todays.map((e) => e.headline).join(" / "));
+  }
   const link = (href: string, text: string) => `<a href="${href}">${text}</a>`;
 
   const hero = todays.length
-    ? todays.map((e) => heroCard(e, ctx, isToday ? now.time : undefined)).join("")
+    ? todays.map((e) => heroCard(e, ctx, isToday ? now.time : undefined, !!event)).join("")
     : `<div class="empty">
         <h2>${t.nothingTitle}</h2>
         <p>${isToday ? t.nothingToday : t.nothingDay}</p>
@@ -286,7 +243,7 @@ export function renderPage(
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
-${seo(locale, isToday ? undefined : date, opts.langInUrl ?? false, title, description, todays)}
+${renderSeo({ locale, title, description, date: pageDate, langInUrl: opts.langInUrl, event })}
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -300,11 +257,11 @@ ${seo(locale, isToday ? undefined : date, opts.langInUrl ?? false, title, descri
 <style>${CSS}</style>
 </head>
 <body>
-<div class="page">
+<div class="page${event ? " event-page" : ""}">
   <header class="top">
     <div class="brand">${LOGO}<div><strong>${t.brand}</strong><span>${t.sub}</span></div></div>
     <div class="tools">
-      ${langSwitcher(locale, date, isToday, t)}
+      ${langSwitcher(locale, t, path, pageDate)}
       <a class="pill" href="https://maps.app.goo.gl/9UYqFcwpWaisgubK9" target="_blank" rel="noopener">${PIN}${t.map}</a>
     </div>
   </header>
@@ -312,19 +269,19 @@ ${seo(locale, isToday ? undefined : date, opts.langInUrl ?? false, title, descri
 <main>
   <p class="offline" id="offline" hidden>${t.offline}</p>
   <section class="today">
-    <nav class="daynav">
+    ${event ? `<a class="back" href="/?lang=${locale}">← ${t.backToSchedule}</a><p class="event-date">${esc(ctx.fullDate(date))} · JST</p>` : `<nav class="daynav">
       <a href="/?date=${addDays(date, -1)}" aria-label="${t.prevDay}">‹</a>
       <div><span class="label">${label}</span><span class="date">${esc(ctx.longDate(date))}</span></div>
       <a href="/?date=${addDays(date, 1)}" aria-label="${t.nextDay}">›</a>
-    </nav>
+    </nav>`}
     ${hero}
-    ${isToday ? "" : `<a class="back" href="/">${t.backToToday}</a>`}
+    ${event ? `<p class="event-description">${esc(description)}</p><p class="event-venue">${PIN}<span lang="ja">日本武道館 · 〒102-8321 東京都千代田区北の丸公園2-3</span></p>` : isToday ? "" : `<a class="back" href="/">${t.backToToday}</a>`}
   </section>
 
-  <section class="upcoming">
+  ${event ? "" : `<section class="upcoming">
     <h2 class="section">${t.comingUp}</h2>
     ${later.length ? upcoming(later, ctx) : `<p class="muted">${t.noUpcoming}</p>`}
-  </section>
+  </section>`}
 
   <footer>
     <p>${t.footer({
@@ -335,7 +292,7 @@ ${seo(locale, isToday ? undefined : date, opts.langInUrl ?? false, title, descri
     <p>${esc(t.updated(updated))}${opts.health && opts.health !== "ok" ? ` · <a class="warn" href="/health">⚠ ${t.dataIssue}</a>` : ""}</p>
   </footer>
 </main>
-${calendar(snap.events, date, now.date, ctx)}
+${event ? "" : calendar(snap.events, date, now.date, ctx)}
 </div>
 </div>
 <script>

@@ -10,7 +10,7 @@ export interface Health {
   status: "ok" | "warning" | "error";
   updatedAt: string;
   ageHours: number;
-  problems: string[]; // errors: alert on these
+  problems: string[];
   warnings: string[];
   sources: Snapshot["sources"];
 }

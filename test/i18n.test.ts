@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { pickLocale } from "../src/i18n";
+import { LOCALES, pickLocale } from "../src/i18n";
 import { cjk, renderPage } from "../src/render";
 import type { Snapshot } from "../src/types";
 
@@ -33,7 +33,7 @@ test("renderPage localizes UI and tags event text as Japanese", () => {
   expect(renderPage(snap, { date: "2026-11-03", now, locale: "ja" })).toContain("11月3日(火)");
 });
 
-test("renderPage emits canonical, hreflang and escaped JSON-LD", () => {
+test("renderPage emits canonical, hreflang and escaped page JSON-LD", () => {
   const snap: Snapshot = {
     updatedAt: "2026-10-20T00:00:00Z",
     sources: [],
@@ -44,6 +44,38 @@ test("renderPage emits canonical, hreflang and escaped JSON-LD", () => {
   const negotiated = renderPage(snap, { date: "2026-11-03", now: { date: "2026-11-03", time: "10:00" }, locale: "ja" });
   expect(negotiated).toContain('<link rel="canonical" href="https://budokan.hewig.dev/">');
   expect(html).toContain('hreflang="x-default" href="https://budokan.hewig.dev/?date=2026-11-04"');
-  expect(html).toContain('"startDate":"2026-11-04T18:30:00+09:00"');
+  const data = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)![1]);
+  expect(data).toMatchObject({
+    "@type": "CollectionPage",
+    url: "https://budokan.hewig.dev/?lang=ja&date=2026-11-04",
+    inLanguage: "ja",
+  });
+  expect(data.description).toContain("</script><b>x");
   expect(html).not.toContain("</script><b>");
+});
+
+test.each(LOCALES)("%s schedule pages do not advertise individual event rich results", (locale) => {
+  const snap: Snapshot = {
+    updatedAt: "2026-10-25T00:00:00Z",
+    sources: [],
+    events: [
+      // Sparse source data must not turn a schedule into an event page.
+      { date: "2026-10-25", kind: "concert", headline: "郷ひろみ", title: "Concert Tour 2026", sources: [] },
+      { date: "2026-11-03", kind: "budo", headline: "剣道選手権大会", organizer: "全日本剣道連盟", sources: [] },
+      { date: "2026-11-03", kind: "concert", headline: "Evening concert", start: "18:30", end: "21:00", sources: [] },
+    ],
+  };
+  const now = { date: "2026-10-25", time: "10:00" };
+  for (const date of [now.date, "2026-11-03", "2026-11-04"]) {
+    const html = renderPage(snap, { date, now, locale });
+    const data = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)![1]);
+    expect(data).toMatchObject({
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      url: `https://budokan.hewig.dev/${date === now.date ? "" : `?date=${date}`}`,
+      inLanguage: locale,
+      about: { "@type": "Place", name: "日本武道館 (Nippon Budokan)" },
+    });
+    expect(html).not.toMatch(/"@type":"(?:Event|MusicEvent|SportsEvent)"/);
+  }
 });

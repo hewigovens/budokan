@@ -41,7 +41,6 @@ export interface Strings {
   updated: (when: string) => string;
   dataIssue: string;
   description: string;
-  // Search-facing <title>/description, phrased with the words people actually search for.
   metaTitle: string;
   metaDayTitle: (date: string) => string;
   metaDayDesc: (date: string, names: string) => string;
@@ -49,6 +48,9 @@ export interface Strings {
   sports: Record<string, string>;
   language: string;
   details: string;
+  eventDetails: string;
+  backToSchedule: string;
+  eventDescription: (name: string, category: string) => string;
   askAI: string;
   askAIAbout: (name: string, date: string) => string;
   askAIDay: (date: string) => string;
@@ -61,6 +63,9 @@ const en: Strings = {
   offline: "You're offline — showing the last saved schedule.",
   language: "Language",
   details: "Source",
+  eventDetails: "Event details",
+  backToSchedule: "Back to the schedule",
+  eventDescription: (name, category) => `${name} — ${category.toLowerCase()} event at Nippon Budokan.`,
   askAI: "Ask Google AI",
   askAIAbout: (name, date) => `Tell me about "${name}" at Nippon Budokan on ${date}: what it is, who performs, start time, and tickets.`,
   askAIDay: (date) => `What's happening at Nippon Budokan (日本武道館) on ${date}?`,
@@ -107,6 +112,9 @@ const ja: Strings = {
   offline: "オフラインです。最後に保存した予定を表示しています。",
   language: "言語",
   details: "詳細",
+  eventDetails: "イベント詳細",
+  backToSchedule: "スケジュールに戻る",
+  eventDescription: (name, category) => `日本武道館で開催される${category}「${name}」。`,
   askAI: "Google AIに聞く",
   askAIAbout: (name, date) => `${date}に日本武道館で開催される「${name}」について、内容・出演者・開演時間・チケット情報を教えて。`,
   askAIDay: (date) => `${date}の日本武道館では何が開催されますか？`,
@@ -157,6 +165,9 @@ const zhHans: Strings = {
   offline: "当前离线，显示的是上次保存的日程。",
   language: "语言",
   details: "详情",
+  eventDetails: "活动详情",
+  backToSchedule: "返回日程",
+  eventDescription: (name, category) => `${name}，在日本武道馆举行的${category}活动。`,
   askAI: "问 Google AI",
   askAIAbout: (name, date) => `介绍一下${date}在日本武道馆举行的「${name}」：活动内容、出演者、开演时间和门票信息。`,
   askAIDay: (date) => `${date}日本武道馆有什么活动？`,
@@ -208,6 +219,9 @@ const zhHant: Strings = {
   offline: "目前離線，顯示的是上次儲存的日程。",
   language: "語言",
   details: "詳情",
+  eventDetails: "活動詳情",
+  backToSchedule: "返回日程",
+  eventDescription: (name, category) => `${name}，在日本武道館舉行的${category}活動。`,
   askAI: "問 Google AI",
   askAIAbout: (name, date) => `介紹一下${date}在日本武道館舉行的「${name}」：活動內容、演出者、開演時間和票務資訊。`,
   askAIDay: (date) => `${date}日本武道館有什麼活動？`,
@@ -255,6 +269,9 @@ const ko: Strings = {
   offline: "오프라인 상태입니다. 마지막으로 저장된 일정을 표시합니다.",
   language: "언어",
   details: "상세",
+  eventDetails: "이벤트 상세",
+  backToSchedule: "일정으로 돌아가기",
+  eventDescription: (name, category) => `일본 부도칸에서 열리는 ${category} 이벤트 「${name}」.`,
   askAI: "Google AI에게 묻기",
   askAIAbout: (name, date) => `${date} 일본 부도칸에서 열리는 「${name}」에 대해 알려줘: 내용, 출연자, 시작 시간, 티켓 정보.`,
   askAIDay: (date) => `${date} 일본 부도칸에서 무슨 행사가 열리나요?`,
