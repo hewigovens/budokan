@@ -27,6 +27,9 @@ Run `bun run typecheck && bun test` before finishing any change.
 - Each refresh assigns stable event IDs and stores all published records in KV (`event-archive`).
   `GET /events/<id>/` serves one event, including after it leaves the rolling snapshot. Existing snapshots
   migrate on first read. `GET /sitemap-events.xml` lists event pages in all five locales.
+- Date-filtered calendar views use `noindex, follow`; calendar links use `nofollow` to avoid
+  an unbounded crawl. Home and event canonicals use explicit `?lang=` URLs matching the sitemaps.
+  Keep date filters out of sitemaps and head language alternates.
 - `GET /api/events` returns public event fields without diagnostics or images. `GET /health` returns aggregate status (503 on errors) for
   uptime monitors.
 - Static files (icons, `manifest.webmanifest`, `sw.js`) are in `public/` and served by Workers assets.

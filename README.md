@@ -64,6 +64,11 @@ localization, caching, and repository conventions.
 Schedule and event pages accept a `?lang=` parameter: `en`, `ja`, `zh-Hans`, `zh-Hant`, or
 `ko`. Without an explicit language, the app uses the saved preference or the browser's language.
 
+Search indexing is reserved for the localized homepages and permanent event pages. Date
+filters remain available for browsing with `noindex, follow`; calendar navigation uses
+`nofollow` to limit crawling of empty days. Canonicals always name the rendered language,
+and equivalent query variants redirect to a single URL.
+
 ## Deployment
 
 Pushes to `main` run tests and deploy to Cloudflare Workers through GitHub Actions.

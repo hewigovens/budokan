@@ -41,7 +41,7 @@ test("event API exposes listings but not diagnostics or cached image URLs", asyn
 });
 
 test("HTML and structured data ignore images already cached in KV", async () => {
-  const html = await (await request("/?date=2026-10-24&lang=en")).text();
+  const html = await (await request("/?lang=en&date=2026-10-24")).text();
   expect(html).toContain("Example Band");
   expect(html).not.toContain("example.invalid/unlicensed.png");
   expect(html).not.toContain(marker);

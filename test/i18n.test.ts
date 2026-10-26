@@ -39,11 +39,11 @@ test("renderPage emits canonical, hreflang and escaped page JSON-LD", () => {
     sources: [],
     events: [{ date: "2026-11-04", kind: "concert", headline: "</script><b>x", start: "18:30", sources: [] }],
   };
-  const html = renderPage(snap, { date: "2026-11-04", now: { date: "2026-11-03", time: "10:00" }, locale: "ja", langInUrl: true });
+  const html = renderPage(snap, { date: "2026-11-04", now: { date: "2026-11-03", time: "10:00" }, locale: "ja" });
   expect(html).toContain('<link rel="canonical" href="https://budokan.hewig.dev/?lang=ja&#38;date=2026-11-04">');
-  const negotiated = renderPage(snap, { date: "2026-11-03", now: { date: "2026-11-03", time: "10:00" }, locale: "ja" });
-  expect(negotiated).toContain('<link rel="canonical" href="https://budokan.hewig.dev/">');
-  expect(html).toContain('hreflang="x-default" href="https://budokan.hewig.dev/?date=2026-11-04"');
+  const negotiated = renderPage(snap, { now: { date: "2026-11-03", time: "10:00" }, locale: "ja" });
+  expect(negotiated).toContain('<link rel="canonical" href="https://budokan.hewig.dev/?lang=ja">');
+  expect(negotiated).toContain('hreflang="x-default" href="https://budokan.hewig.dev/"');
   const data = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)![1]);
   expect(data).toMatchObject({
     "@type": "CollectionPage",
@@ -67,12 +67,12 @@ test.each(LOCALES)("%s schedule pages do not advertise individual event rich res
   };
   const now = { date: "2026-10-25", time: "10:00" };
   for (const date of [now.date, "2026-11-03", "2026-11-04"]) {
-    const html = renderPage(snap, { date, now, locale });
+    const html = renderPage(snap, { date: date === now.date ? undefined : date, now, locale });
     const data = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)![1]);
     expect(data).toMatchObject({
       "@context": "https://schema.org",
       "@type": "CollectionPage",
-      url: `https://budokan.hewig.dev/${date === now.date ? "" : `?date=${date}`}`,
+      url: `https://budokan.hewig.dev/?lang=${locale}${date === now.date ? "" : `&date=${date}`}`,
       inLanguage: locale,
       about: { "@type": "Place", name: "日本武道館 (Nippon Budokan)" },
     });

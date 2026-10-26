@@ -28,7 +28,7 @@ const schema = (html: string) => JSON.parse(html.match(/<script type="applicatio
 
 test("existing snapshots migrate once, publish records before links, and link to one-event pages", async () => {
   const app = setup();
-  const html = await (await app.get("/?date=2026-11-13&lang=en")).text();
+  const html = await (await app.get("/?lang=en&date=2026-11-13")).text();
   const event = app.archive().events[0];
   expect(app.writes).toEqual([ARCHIVE_KEY, "snapshot"]);
   expect(html).toContain(`href="${eventPath(event.id)}?lang=en"`);
@@ -54,7 +54,7 @@ test.each(LOCALES)("event URLs keep their identity, canonical and language switc
   const app = setup();
   await app.get("/api/events");
   const path = eventPath(app.archive().events[0].id);
-  const response = await app.get(`${path}?lang=${locale}&date=2027-01-01`);
+  const response = await app.get(`${path}?lang=${locale}`);
   const html = await response.text();
   expect(response.headers.get("content-language")).toBe(locale);
   expect(html).toContain(`<link rel="canonical" href="${SITE}${path}?lang=${locale}">`);
@@ -62,7 +62,7 @@ test.each(LOCALES)("event URLs keep their identity, canonical and language switc
   expect(schema(html).startDate).toBe("2026-11-13T18:00:00+09:00");
   for (const alternate of LOCALES.filter((l) => l !== locale)) expect(html).toContain(`href="${path}?lang=${alternate}" lang="${alternate}"`);
   const negotiated = await app.get(path, { "Accept-Language": locale });
-  expect(await negotiated.text()).toContain(`<link rel="canonical" href="${SITE}${path}">`);
+  expect(await negotiated.text()).toContain(`<link rel="canonical" href="${SITE}${path}?lang=${locale}">`);
 });
 
 test("unknown optional facts stay absent and past URLs survive an empty current snapshot", async () => {
@@ -152,4 +152,87 @@ test("cron archives the previous snapshot before pruning past events", async () 
     expect((await app.get(eventPath(old.id))).status).toBe(200);
     expect(current.sources.every((s) => s.ok)).toBe(true);
   } finally { fetcher.mockRestore(); }
+});
+
+const reportedDates = ["2027-03-16", "2027-03-01", "2027-10-14", "2027-02-09", "2027-01-23", "2027-02-06", "2027-07-03", "2027-04-05", "2027-02-28", "2027-01-17"];
+
+test("reported empty dates and populated calendar views stay usable without competing for indexing", async () => {
+  const app = setup();
+  for (const date of [...reportedDates, shows[0].date, jstNow().date]) {
+    for (const locale of LOCALES) {
+      const response = await app.get(`/?lang=${locale}&date=${date}`);
+      expect(response.status).toBe(200);
+      const html = await response.text();
+      expect(html).toContain('<meta name="robots" content="noindex, follow">');
+      expect(html).toContain(`<link rel="canonical" href="${SITE}/?lang=${locale}&#38;date=${date}">`);
+      expect(html).not.toContain('<link rel="alternate"');
+      expect(html).not.toContain('"@type":"MusicEvent"');
+    }
+  }
+});
+
+test.each(LOCALES)("indexable %s pages agree with the sitemaps and preserve language during navigation", async (locale) => {
+  const app = setup();
+  const preferences: HeadersInit[] = [{ "Accept-Language": locale }, { cookie: `lang=${locale}`, "Accept-Language": "en" }];
+  for (const headers of preferences) {
+    const html = await (await app.get("/", headers)).text();
+    expect(html).toContain(`<link rel="canonical" href="${SITE}/?lang=${locale}">`);
+    expect(html).not.toContain('name="robots"');
+    expect(html).toContain(`hreflang="${locale}" href="${SITE}/?lang=${locale}"`);
+    // Calendar and day links must not depend on a visitor's cookie to keep the language.
+    const dateLinks = [...html.matchAll(/<a [^>]*href="([^"]*date=[^"]*)"[^>]*>/g)];
+    expect(dateLinks.length).toBeGreaterThan(50);
+    for (const [tag, href] of dateLinks) {
+      expect(href).toStartWith(`/?lang=${locale}&#38;date=`);
+      expect(tag).toContain('rel="nofollow"');
+    }
+  }
+  const xml = await (await app.get("/sitemap-events.xml")).text();
+  for (const event of app.archive().events) {
+    const url = `${SITE}${eventPath(event.id)}?lang=${locale}`;
+    const html = await (await app.get(`${eventPath(event.id)}?lang=${locale}`)).text();
+    expect(xml).toContain(`<loc>${url}</loc>`);
+    expect(html).toContain(`<link rel="canonical" href="${url}">`);
+    expect(html).not.toContain('name="robots"');
+  }
+});
+
+test("equivalent query variants permanently redirect once to a normalized URL", async () => {
+  const app = setup();
+  await app.get("/api/events");
+  const path = eventPath(app.archive().events[0].id);
+  const cases = [
+    ["/?date=2027-03-16&lang=en", "/?lang=en&date=2027-03-16"],
+    ["/?lang=en&date=2027-03-16&utm_source=google", "/?lang=en&date=2027-03-16"],
+    ["/?lang=ja&lang=en", "/?lang=ja"],
+    ["/?lang=unsupported&date=bad", "/"],
+    ["/?lang=ja&date=2027-02-30", "/?lang=ja"],
+    [`${path.slice(0, -1)}?date=2027-03-16&lang=ja&utm_source=google`, `${path}?lang=ja`],
+    [`${path}?lang=ko&date=2027-03-16`, `${path}?lang=ko`],
+  ];
+  for (const [input, target] of cases) {
+    const response = await app.get(input);
+    expect(response.status).toBe(301);
+    expect(response.headers.get("location")).toBe(`${SITE}${target}`);
+    const destination = await app.get(target);
+    expect(destination.status).toBe(200);
+    expect(destination.headers.has("location")).toBe(false);
+  }
+});
+
+
+test("a fixed date keeps its canonical and indexing policy when today changes", async () => {
+  const app = setup();
+  const clock = spyOn(Date, "now");
+  try {
+    for (const day of ["2027-03-16", "2027-03-17"]) {
+      clock.mockReturnValue(Date.parse(`${day}T03:00:00Z`));
+      const response = await app.get("/?lang=en&date=2027-03-16");
+      expect(response.status).toBe(200);
+      const html = await response.text();
+      expect(html).toContain('<link rel="canonical" href="https://budokan.hewig.dev/?lang=en&#38;date=2027-03-16">');
+      expect(html).toContain('<meta name="robots" content="noindex, follow">');
+      expect(await (await app.get("/?lang=en")).text()).not.toContain('name="robots"');
+    }
+  } finally { clock.mockRestore(); }
 });

@@ -1,5 +1,5 @@
 import { budoEvents } from "./budo";
-import { addDays, jstNow } from "./dates";
+import { addDays, isDate, jstNow } from "./dates";
 import { checkHealth } from "./health";
 import { ARCHIVE_KEY, isPublished, publishEvents } from "./events";
 import { isLocale, pickLocale } from "./i18n";
@@ -8,6 +8,7 @@ import { renderPage } from "./render";
 import { fetchEnjoyLive, fetchEventernote } from "./scrape";
 import { eventSitemap } from "./sitemap";
 import type { BudokanEvent, PublishedSnapshot, Snapshot, SourceStatus } from "./types";
+import { eventPath } from "./urls";
 
 interface Env {
   EVENTS: KVNamespace;
@@ -81,17 +82,20 @@ async function loadArchive(env: Env): Promise<PublishedSnapshot> {
 export default {
   async fetch(req, env): Promise<Response> {
     const url = new URL(req.url);
-    const eventRoute = url.pathname.match(/^\/events\/(\d{4}-\d{2}-\d{2}-[a-f0-9]{16})(\/?)$/);
-    if (eventRoute && !eventRoute[2]) {
-      url.pathname += "/";
-      return Response.redirect(url.href, 301);
-    }
+    const eventRoute = url.pathname.match(/^\/events\/(\d{4}-\d{2}-\d{2}-[a-f0-9]{16})\/?$/);
     if (url.pathname === "/" || eventRoute) {
       const now = jstNow();
       const asked = url.searchParams.get("date");
-      const date = asked && /^\d{4}-\d{2}-\d{2}$/.test(asked) ? asked : now.date;
+      const date = !eventRoute && isDate(asked) ? asked : undefined;
       const langParam = url.searchParams.get("lang");
       const locale = pickLocale(langParam, req.headers.get("cookie"), req.headers.get("accept-language"));
+      const path = eventRoute ? eventPath(eventRoute[1]) : "/";
+      const params = new URLSearchParams();
+      if (isLocale(langParam)) params.set("lang", langParam);
+      if (date) params.set("date", date);
+      const normalized = `${path}${params.size ? `?${params}` : ""}`;
+      // Drop duplicate/irrelevant parameters and normalize slash/order in one hop.
+      if (url.pathname + url.search !== normalized) return Response.redirect(new URL(normalized, url).href, 301);
       const headers = new Headers({
         "content-type": "text/html; charset=utf-8",
         "cache-control": "private, max-age=300",
@@ -109,7 +113,7 @@ export default {
       }
       if (eventRoute && !event) return new Response("Event not found", { status: 404 });
       const health = checkHealth(snap, Date.now(), now.date).status;
-      return new Response(renderPage(snap, { date: event?.date ?? date, now, locale, langInUrl: isLocale(langParam), health, event }), { headers });
+      return new Response(renderPage(snap, { date: event?.date ?? date, now, locale, health, event }), { headers });
     }
     switch (url.pathname) {
       case "/sitemap-events.xml":

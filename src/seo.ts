@@ -10,7 +10,6 @@ interface SeoProps {
   title: string;
   description: string;
   date?: string;
-  langInUrl?: boolean;
   event?: PublishedEvent;
 }
 
@@ -46,12 +45,15 @@ function eventNode(event: PublishedEvent, url: string, description: string) {
   };
 }
 
-export function renderSeo({ locale, title, description, date, langInUrl = false, event }: SeoProps): string {
+export function renderSeo({ locale, title, description, date, event }: SeoProps): string {
   const path = event ? eventPath(event.id) : "/";
-  const alternates = LOCALES.map((l) => `<link rel="alternate" hreflang="${l}" href="${esc(pageUrl(path, l, date))}">`).join("\n");
-  // Language-negotiated URLs are x-default and canonicalize to themselves.
-  const xDefault = `${SITE}${path}${date ? `?date=${date}` : ""}`;
-  const self = langInUrl ? pageUrl(path, locale, date) : xDefault;
+  // Calendar filters are navigation; search landing pages are the schedule and events.
+  const indexing = date ? '<meta name="robots" content="noindex, follow">' : [
+    ...LOCALES.map((l) => `<link rel="alternate" hreflang="${l}" href="${esc(pageUrl(path, l))}">`),
+    `<link rel="alternate" hreflang="x-default" href="${SITE}${path}">`,
+  ].join("\n");
+  // Match the rendered language even when selected through a cookie or browser setting.
+  const self = pageUrl(path, locale, date);
   // Event rich results belong on individual event pages; the rolling schedule is a collection.
   const node = event ? eventNode(event, self, description) : {
     "@type": "CollectionPage",
@@ -65,8 +67,7 @@ export function renderSeo({ locale, title, description, date, langInUrl = false,
   // Escape '<' so source text cannot close the script element.
   const json = JSON.stringify({ "@context": "https://schema.org", ...node }).replace(/</g, "\\u003c");
   return `<link rel="canonical" href="${esc(self)}">
-${alternates}
-<link rel="alternate" hreflang="x-default" href="${esc(xDefault)}">
+${indexing}
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="${esc(STRINGS[locale].brand)}">
 <meta property="og:title" content="${esc(title)}">

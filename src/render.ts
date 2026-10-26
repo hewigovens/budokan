@@ -6,7 +6,7 @@ import type { BudokanEvent, PublishedEvent, Snapshot } from "./types";
 import { eventName, eventSubtitle } from "./events";
 import { esc } from "./html";
 import { renderSeo } from "./seo";
-import { eventPath, pagePath } from "./urls";
+import { eventPath, pagePath, schedulePath } from "./urls";
 
 // Browsers break CJK text between any two characters, so 選手権大会 can end up as 選手権大 / 会.
 // We render CJK runs with `word-break: keep-all` and add <wbr> only at word boundaries found
@@ -51,10 +51,9 @@ interface Ctx {
 }
 
 interface PageOptions {
-  date: string;
+  date?: string;
   now: { date: string; time: string };
   locale?: Locale;
-  langInUrl?: boolean;
   health?: "ok" | "warning" | "error";
   event?: PublishedEvent;
 }
@@ -177,11 +176,11 @@ function monthGrid(ym: string, byDate: Map<string, BudokanEvent[]>, selected: st
       evs.some((e) => e.kind === "budo") && "has-budo",
     ].filter(Boolean).join(" ");
     const title = evs.map((e) => e.headline).join(" / ");
-    cells += `<a class="${cls}" href="/?date=${date}"${title ? ` title="${esc(title)}"` : ""}>${d}${evs.length ? `<i></i>` : ""}</a>`;
+    cells += `<a class="${cls}" href="${esc(schedulePath(ctx.locale, date, today))}" rel="nofollow"${title ? ` title="${esc(title)}"` : ""}>${d}${evs.length ? `<i></i>` : ""}</a>`;
   }
   const title = esc(fmt(ctx.locale, { year: "numeric", month: "long" }).format(first));
   const header = nav
-    ? `<div class="cal-head"><a href="/?date=${nav.prev}" aria-label="${ctx.t.prevMonth}">‹</a><b>${title}</b><a href="/?date=${nav.next}" aria-label="${ctx.t.nextMonth}">›</a></div>`
+    ? `<div class="cal-head"><a href="${esc(schedulePath(ctx.locale, nav.prev, today))}" rel="nofollow" aria-label="${ctx.t.prevMonth}">‹</a><b>${title}</b><a href="${esc(schedulePath(ctx.locale, nav.next, today))}" rel="nofollow" aria-label="${ctx.t.nextMonth}">›</a></div>`
     : `<div class="cal-head"><b>${title}</b></div>`;
   return `<div class="cal">${header}<div class="grid">${heads}${cells}</div></div>`;
 }
@@ -201,7 +200,8 @@ function calendar(events: BudokanEvent[], selected: string, today: string, ctx: 
 }
 
 export function renderPage(snap: Snapshot, opts: PageOptions): string {
-  const { date, now } = opts;
+  const { now } = opts;
+  const date = opts.date ?? now.date;
   const event = opts.event;
   const locale = opts.locale ?? "en";
   const t = STRINGS[locale];
@@ -216,7 +216,7 @@ export function renderPage(snap: Snapshot, opts: PageOptions): string {
   const updated = new Date(snap.updatedAt).toLocaleString(INTL_LOCALE[locale], { timeZone: "Asia/Tokyo", dateStyle: "medium", timeStyle: "short" });
   const label = isToday ? t.today : date === addDays(now.date, 1) ? t.tomorrow : date < now.date ? t.pastDay : t.upcoming;
   const path = event ? eventPath(event.id) : "/";
-  const pageDate = event || isToday ? undefined : date;
+  const pageDate = event ? undefined : opts.date;
   let title = isToday ? t.metaTitle : t.metaDayTitle(ctx.fullDate(date));
   let description = isToday ? t.description : t.metaEmptyDesc(ctx.fullDate(date));
   if (event) {
@@ -243,7 +243,7 @@ export function renderPage(snap: Snapshot, opts: PageOptions): string {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
-${renderSeo({ locale, title, description, date: pageDate, langInUrl: opts.langInUrl, event })}
+${renderSeo({ locale, title, description, date: pageDate, event })}
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -270,12 +270,12 @@ ${renderSeo({ locale, title, description, date: pageDate, langInUrl: opts.langIn
   <p class="offline" id="offline" hidden>${t.offline}</p>
   <section class="today">
     ${event ? `<a class="back" href="/?lang=${locale}">← ${t.backToSchedule}</a><p class="event-date">${esc(ctx.fullDate(date))} · JST</p>` : `<nav class="daynav">
-      <a href="/?date=${addDays(date, -1)}" aria-label="${t.prevDay}">‹</a>
+      <a href="${esc(schedulePath(locale, addDays(date, -1), now.date))}" rel="nofollow" aria-label="${t.prevDay}">‹</a>
       <div><span class="label">${label}</span><span class="date">${esc(ctx.longDate(date))}</span></div>
-      <a href="/?date=${addDays(date, 1)}" aria-label="${t.nextDay}">›</a>
+      <a href="${esc(schedulePath(locale, addDays(date, 1), now.date))}" rel="nofollow" aria-label="${t.nextDay}">›</a>
     </nav>`}
     ${hero}
-    ${event ? `<p class="event-description">${esc(description)}</p><p class="event-venue">${PIN}<span lang="ja">日本武道館 · 〒102-8321 東京都千代田区北の丸公園2-3</span></p>` : isToday ? "" : `<a class="back" href="/">${t.backToToday}</a>`}
+    ${event ? `<p class="event-description">${esc(description)}</p><p class="event-venue">${PIN}<span lang="ja">日本武道館 · 〒102-8321 東京都千代田区北の丸公園2-3</span></p>` : isToday ? "" : `<a class="back" href="${esc(pagePath("/", locale))}">${t.backToToday}</a>`}
   </section>
 
   ${event ? "" : `<section class="upcoming">
