@@ -1,5 +1,5 @@
 import { budoEvents } from "./budo";
-import { addDays, isDate, jstNow } from "./dates";
+import { addDays, inDateWindow, isDate, jstNow } from "./dates";
 import { checkHealth } from "./health";
 import { ARCHIVE_KEY, isPublished, publishEvents } from "./events";
 import { isLocale, pickLocale } from "./i18n";
@@ -110,6 +110,7 @@ export default {
       const now = jstNow();
       const asked = url.searchParams.get("date");
       const date = !eventRoute && isDate(asked) ? asked : undefined;
+      if (date && !inDateWindow(date, now.date)) return new Response("Date out of range", { status: 404, headers: { "x-robots-tag": "noindex" } });
       const langParam = url.searchParams.get("lang");
       const locale = pickLocale(langParam, req.headers.get("cookie"), req.headers.get("accept-language"));
       const path = eventRoute ? eventPath(eventRoute[1]) : "/";

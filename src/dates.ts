@@ -31,3 +31,10 @@ export function addMonths(ym: string, n: number): string {
   d.setUTCMonth(d.getUTCMonth() + n);
   return d.toISOString().slice(0, 7);
 }
+
+// Calendar views span last month through twelve months ahead; outside that the date URL space
+// is unbounded and empty, and crawlers would walk it forever via the day and month links.
+export function inDateWindow(date: string, today: string): boolean {
+  const ym = today.slice(0, 7);
+  return date >= `${addMonths(ym, -1)}-01` && date < `${addMonths(ym, 13)}-01`;
+}

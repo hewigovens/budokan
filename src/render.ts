@@ -1,4 +1,4 @@
-import { addDays, addMonths, minutesSinceMidnight, utc } from "./dates";
+import { addDays, addMonths, inDateWindow, minutesSinceMidnight, utc } from "./dates";
 import { GOOGLE_HL, INTL_LOCALE, LOCALE_NAMES, LOCALES, OFFICIAL_LINK_TEXT, SHORT_NAMES, STRINGS, type Locale, type Strings } from "./i18n";
 import { GLOBE, LOGO, PIN, SPARKLE } from "./icons";
 import { CSS } from "./styles";
@@ -157,6 +157,13 @@ function langSwitcher(current: Locale, t: Strings, path: string, date?: string):
   return `<details class="lang"><summary aria-label="${t.language}">${GLOBE}<span>${SHORT_NAMES[current]}</span></summary><div class="menu">${items}</div></details>`;
 }
 
+// Navigation stops at the date window so no page links to an out-of-range 404.
+function navLink(locale: Locale, date: string, today: string, label: string, text: string): string {
+  return inDateWindow(date, today)
+    ? `<a href="${esc(schedulePath(locale, date, today))}" rel="nofollow" aria-label="${label}">${text}</a>`
+    : `<span class="edge"></span>`;
+}
+
 function monthGrid(ym: string, byDate: Map<string, BudokanEvent[]>, selected: string, today: string, ctx: Ctx, nav?: { prev: string; next: string }): string {
   const first = utc(`${ym}-01`);
   const daysInMonth = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
@@ -176,11 +183,13 @@ function monthGrid(ym: string, byDate: Map<string, BudokanEvent[]>, selected: st
       evs.some((e) => e.kind === "budo") && "has-budo",
     ].filter(Boolean).join(" ");
     const title = evs.map((e) => e.headline).join(" / ");
-    cells += `<a class="${cls}" href="${esc(schedulePath(ctx.locale, date, today))}" rel="nofollow"${title ? ` title="${esc(title)}"` : ""}>${d}${evs.length ? `<i></i>` : ""}</a>`;
+    cells += inDateWindow(date, today)
+      ? `<a class="${cls}" href="${esc(schedulePath(ctx.locale, date, today))}" rel="nofollow"${title ? ` title="${esc(title)}"` : ""}>${d}${evs.length ? `<i></i>` : ""}</a>`
+      : `<span class="${cls} off">${d}</span>`;
   }
   const title = esc(fmt(ctx.locale, { year: "numeric", month: "long" }).format(first));
   const header = nav
-    ? `<div class="cal-head"><a href="${esc(schedulePath(ctx.locale, nav.prev, today))}" rel="nofollow" aria-label="${ctx.t.prevMonth}">‹</a><b>${title}</b><a href="${esc(schedulePath(ctx.locale, nav.next, today))}" rel="nofollow" aria-label="${ctx.t.nextMonth}">›</a></div>`
+    ? `<div class="cal-head">${navLink(ctx.locale, nav.prev, today, ctx.t.prevMonth, "‹")}<b>${title}</b>${navLink(ctx.locale, nav.next, today, ctx.t.nextMonth, "›")}</div>`
     : `<div class="cal-head"><b>${title}</b></div>`;
   return `<div class="cal">${header}<div class="grid">${heads}${cells}</div></div>`;
 }
@@ -270,9 +279,9 @@ ${renderSeo({ locale, title, description, date: pageDate, event })}
   <p class="offline" id="offline" hidden>${t.offline}</p>
   <section class="today">
     ${event ? `<a class="back" href="/?lang=${locale}">← ${t.backToSchedule}</a><p class="event-date">${esc(ctx.fullDate(date))} · JST</p>` : `<nav class="daynav">
-      <a href="${esc(schedulePath(locale, addDays(date, -1), now.date))}" rel="nofollow" aria-label="${t.prevDay}">‹</a>
+      ${navLink(locale, addDays(date, -1), now.date, t.prevDay, "‹")}
       <div><span class="label">${label}</span><span class="date">${esc(ctx.longDate(date))}</span></div>
-      <a href="${esc(schedulePath(locale, addDays(date, 1), now.date))}" rel="nofollow" aria-label="${t.nextDay}">›</a>
+      ${navLink(locale, addDays(date, 1), now.date, t.nextDay, "›")}
     </nav>`}
     ${hero}
     ${event ? `<p class="event-description">${esc(description)}</p><p class="event-venue">${PIN}<span lang="ja">日本武道館 · 〒102-8321 東京都千代田区北の丸公園2-3</span></p>` : isToday ? "" : `<a class="back" href="${esc(pagePath("/", locale))}">${t.backToToday}</a>`}

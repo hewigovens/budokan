@@ -45,7 +45,7 @@ a{color:inherit}
 .daynav .label{display:block;font-size:12px;letter-spacing:.08em;color:var(--gold);font-weight:600}
 html[lang="en"] .daynav .label,html[lang="en"] .section{text-transform:uppercase;letter-spacing:.12em}
 .daynav .date{display:block;font-size:clamp(20px,6vw,26px);font-weight:700;letter-spacing:-.01em;white-space:nowrap}
-.daynav a{flex:none;width:48px;height:48px;display:grid;place-items:center;font-size:30px;text-decoration:none;border-radius:50%;color:var(--muted)}
+.daynav a,.daynav .edge{flex:none;width:48px;height:48px;display:grid;place-items:center;font-size:30px;text-decoration:none;border-radius:50%;color:var(--muted)}
 .daynav a:active{background:var(--card)}
 .hero-card{display:flex;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:10px}
 .hero-card img{width:96px;height:96px;border-radius:12px;object-fit:cover;flex:none}
@@ -108,14 +108,14 @@ footer .warn{color:var(--budo)}
 .cal{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}
 .cal-head{display:flex;align-items:center;justify-content:space-between;height:32px;margin-bottom:6px}
 .cal-head b{flex:1;text-align:center;font-size:15px}
-.cal-head a{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;text-decoration:none;font-size:22px;color:var(--muted)}
+.cal-head a,.cal-head .edge{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;text-decoration:none;font-size:22px;color:var(--muted)}
 .cal-head a:hover{background:var(--bg)}
 .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
 .wd{font-size:11px;color:var(--muted);padding:4px 0}
 .wd.we{color:var(--gold)}
 .cell{position:relative;aspect-ratio:1;display:grid;place-items:center;border-radius:10px;font-size:13px;text-decoration:none;font-variant-numeric:tabular-nums}
-.cell:hover{background:var(--bg)}
-.cell.past{color:var(--muted)}
+a.cell:hover{background:var(--bg)}
+.cell.past,.cell.off{color:var(--muted)}
 .cell.today{box-shadow:inset 0 0 0 1.5px var(--gold);font-weight:700}
 .cell.sel{background:var(--ink);color:var(--bg)}
 .cell i{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:var(--live)}

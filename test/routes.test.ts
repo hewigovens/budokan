@@ -1,4 +1,4 @@
-import { expect, spyOn, test } from "bun:test";
+import { afterAll, beforeAll, expect, setSystemTime, spyOn, test } from "bun:test";
 import { addDays, jstNow } from "../src/dates";
 import { ARCHIVE_KEY } from "../src/events";
 import { LOCALES } from "../src/i18n";
@@ -27,6 +27,10 @@ function setup(events = shows) {
   const archive = () => JSON.parse(data.get(ARCHIVE_KEY)!) as PublishedSnapshot;
   return { data, writes, reads, get, isolate, archive, get env() { return env; } };
 }
+
+// Fixture dates must stay inside the calendar's rolling date window.
+beforeAll(() => setSystemTime(new Date("2026-11-06T03:00:00Z")));
+afterAll(() => setSystemTime());
 
 const schema = (html: string) => JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)![1]);
 
@@ -171,6 +175,22 @@ test("page requests in one isolate share KV reads until the memo expires, and re
     await app.get("/?lang=en");
     expect(app.reads.length).toBe(before + 1);
   } finally { clock.mockRestore(); }
+});
+
+test("dates outside the calendar window 404 without a redirect, and edge pages never link past it", async () => {
+  const app = setup();
+  for (const path of ["/?lang=zh-Hant&date=2074-01-31", "/?date=2074-01-31&lang=zh-Hant", "/?lang=en&date=2027-12-01", "/?lang=en&date=2026-09-30"]) {
+    const response = await app.get(path);
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-robots-tag")).toBe("noindex");
+  }
+  for (const date of ["2026-10-01", "2027-11-30"]) {
+    const response = await app.get(`/?lang=en&date=${date}`);
+    expect(response.status).toBe(200);
+    const links = [...(await response.text()).matchAll(/href="\/\?lang=en(?:&#38;date=([\d-]+))?"/g)].map((m) => m[1]).filter(Boolean);
+    expect(links).toContain(date);
+    for (const linked of links) expect((await app.get(`/?lang=en&date=${linked}`)).status).toBe(200);
+  }
 });
 
 const reportedDates = ["2027-03-16", "2027-03-01", "2027-10-14", "2027-02-09", "2027-01-23", "2027-02-06", "2027-07-03", "2027-04-05", "2027-02-28", "2027-01-17"];
