@@ -15,6 +15,29 @@ interface Env {
 }
 
 const KEY = "snapshot";
+// KV bills every get, including edge-cached ones, so page requests share one read per key per isolate per minute.
+const MEMO_MS = 60_000;
+const memos = new WeakMap<KVNamespace, Map<string, { value: unknown; until: number }>>();
+
+function memo(kv: KVNamespace) {
+  let entries = memos.get(kv);
+  if (!entries) memos.set(kv, entries = new Map());
+  return entries;
+}
+
+async function cachedGet<T>(kv: KVNamespace, key: string): Promise<T | null> {
+  const hit = memo(kv).get(key);
+  if (hit && hit.until > Date.now()) return hit.value as T;
+  const value = await kv.get<T>(key, "json");
+  if (value) memo(kv).set(key, { value, until: Date.now() + MEMO_MS });
+  return value;
+}
+
+async function put(kv: KVNamespace, key: string, value: unknown) {
+  await kv.put(key, JSON.stringify(value));
+  memo(kv).set(key, { value, until: Date.now() + MEMO_MS });
+}
+
 async function save(env: Env, snapshot: Snapshot, previous?: Snapshot): Promise<PublishedSnapshot> {
   const stored = await env.EVENTS.get<PublishedSnapshot>(ARCHIVE_KEY, "json");
   // Archive previous records before pruning the rolling feed.
@@ -22,8 +45,8 @@ async function save(env: Env, snapshot: Snapshot, previous?: Snapshot): Promise<
   const published = await publishEvents(snapshot.events, history.archive);
   const next = { ...snapshot, events: published.events };
   // Store records before publishing their links in the rolling snapshot.
-  await env.EVENTS.put(ARCHIVE_KEY, JSON.stringify({ ...snapshot, events: published.archive }));
-  await env.EVENTS.put(KEY, JSON.stringify(next));
+  await put(env.EVENTS, ARCHIVE_KEY, { ...snapshot, events: published.archive });
+  await put(env.EVENTS, KEY, next);
   return next;
 }
 
@@ -66,17 +89,17 @@ async function refresh(env: Env): Promise<PublishedSnapshot> {
 }
 
 async function load(env: Env): Promise<PublishedSnapshot> {
-  const snap = await env.EVENTS.get<Snapshot>(KEY, "json");
+  const snap = await cachedGet<Snapshot>(env.EVENTS, KEY);
   // Legacy snapshots without source status need a fresh scrape.
   if (!snap?.sources) return refresh(env);
   return isPublished(snap) ? snap : save(env, snap);
 }
 
 async function loadArchive(env: Env): Promise<PublishedSnapshot> {
-  const archive = await env.EVENTS.get<PublishedSnapshot>(ARCHIVE_KEY, "json");
+  const archive = await cachedGet<PublishedSnapshot>(env.EVENTS, ARCHIVE_KEY);
   if (archive) return archive;
   const snapshot = await load(env);
-  return await env.EVENTS.get<PublishedSnapshot>(ARCHIVE_KEY, "json") ?? snapshot;
+  return await cachedGet<PublishedSnapshot>(env.EVENTS, ARCHIVE_KEY) ?? snapshot;
 }
 
 export default {

@@ -2,6 +2,8 @@ User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /health
+# Calendar date filters are an unbounded URL space (noindex pages); crawl events via the sitemaps.
+Disallow: /*date=
 
 Sitemap: https://budokan.hewig.dev/sitemap.xml
 Sitemap: https://budokan.hewig.dev/sitemap-events.xml

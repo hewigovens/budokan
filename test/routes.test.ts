@@ -15,13 +15,17 @@ function setup(events = shows) {
   const snapshot: Snapshot = { updatedAt: "2026-10-25T00:00:00Z", sources: [], events };
   const data = new Map([["snapshot", JSON.stringify(snapshot)]]);
   const writes: string[] = [];
-  const env = { EVENTS: {
-    get: async (key: string) => JSON.parse(data.get(key) ?? "null"),
+  const reads: string[] = [];
+  // Each namespace object stands for one isolate, which memoizes its own reads.
+  const namespace = () => ({ EVENTS: {
+    get: async (key: string) => { reads.push(key); return JSON.parse(data.get(key) ?? "null"); },
     put: async (key: string, value: string) => { writes.push(key); data.set(key, value); },
-  } as unknown as KVNamespace };
+  } as unknown as KVNamespace });
+  let env = namespace();
   const get = (path: string, headers?: HeadersInit) => worker.fetch(new Request(`${SITE}${path}`, { headers }), env);
+  const isolate = () => { env = namespace(); };
   const archive = () => JSON.parse(data.get(ARCHIVE_KEY)!) as PublishedSnapshot;
-  return { data, writes, get, archive, env };
+  return { data, writes, reads, get, isolate, archive, get env() { return env; } };
 }
 
 const schema = (html: string) => JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)![1]);
@@ -70,6 +74,7 @@ test("unknown optional facts stay absent and past URLs survive an empty current 
   await app.get("/api/events");
   const event = app.archive().events[1];
   app.data.set("snapshot", JSON.stringify({ updatedAt: "2027-01-01T00:00:00Z", events: [], sources: [] }));
+  app.isolate();
   const response = await app.get(eventPath(event.id));
   expect(response.status).toBe(200);
   const data = schema(await response.text());
@@ -114,6 +119,7 @@ test("a fresh snapshot can serve an event while the archive read is stale", asyn
   await app.get("/api/events");
   const event = app.archive().events[0];
   app.data.set(ARCHIVE_KEY, JSON.stringify({ ...app.archive(), events: [] }));
+  app.isolate();
   const response = await app.get(eventPath(event.id));
   expect(response.status).toBe(200);
   expect(schema(await response.text()).name).toContain(event.headline);
@@ -152,6 +158,19 @@ test("cron archives the previous snapshot before pruning past events", async () 
     expect((await app.get(eventPath(old.id))).status).toBe(200);
     expect(current.sources.every((s) => s.ok)).toBe(true);
   } finally { fetcher.mockRestore(); }
+});
+
+test("page requests in one isolate share KV reads until the memo expires, and refreshes replace it", async () => {
+  const app = setup();
+  await app.get("/api/events");
+  const before = app.reads.length;
+  for (let i = 0; i < 5; i++) expect((await app.get("/?lang=en")).status).toBe(200);
+  expect(app.reads.length).toBe(before);
+  const clock = spyOn(Date, "now").mockReturnValue(Date.now() + 61_000);
+  try {
+    await app.get("/?lang=en");
+    expect(app.reads.length).toBe(before + 1);
+  } finally { clock.mockRestore(); }
 });
 
 const reportedDates = ["2027-03-16", "2027-03-01", "2027-10-14", "2027-02-09", "2027-01-23", "2027-02-06", "2027-07-03", "2027-04-05", "2027-02-28", "2027-01-17"];
