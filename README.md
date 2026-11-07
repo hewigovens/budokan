@@ -18,6 +18,10 @@ merged to combine artist names, tour titles, and times. Martial-arts events come
 [official Budokan annual schedule](https://www.nipponbudokan.or.jp/shinkoujigyou/gyouji_08),
 transcribed into [src/budo.ts](src/budo.ts) and updated each April.
 
+If a source cannot be read, the schedule keeps that source's last published listings and marks
+the affected pages as possibly incomplete instead of showing those days as empty. `/health`
+reports the source as failed either way.
+
 Event pages include the details available from those sources. Unknown optional fields,
 including ticket prices, are omitted from structured data; some non-critical Search Console
 suggestions may remain. Third-party event images are disabled. Check the source listing

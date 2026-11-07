@@ -28,6 +28,8 @@ export interface SourceStatus {
   error?: string;
   checkedAt: string;
   lastSuccessAt?: string;
+  // Set when this run failed and the listings shown came from the last known good copy.
+  retained?: boolean;
 }
 
 export interface Snapshot {

@@ -66,9 +66,15 @@ export function parseEventernote(html: string): BudokanEvent[] {
   return events;
 }
 
+// Cloudflare fronts enjoy-live.net with a managed challenge, which answers non-browser clients
+// with 403 and an interstitial instead of the schedule. Say so, or the failure reads as a bug here.
+export function describeFailure(status: number, mitigated: string | null): string {
+  return mitigated === "challenge" ? `HTTP ${status} (Cloudflare challenge; automated clients are blocked)` : `HTTP ${status}`;
+}
+
 async function get(url: string): Promise<string> {
   const res = await fetch(url, { headers: { "User-Agent": UA, "Accept-Language": "ja" } });
-  if (!res.ok) throw new Error(`${url} → HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`${url} → ${describeFailure(res.status, res.headers.get("cf-mitigated"))}`);
   return res.text();
 }
 

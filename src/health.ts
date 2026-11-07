@@ -17,6 +17,11 @@ export interface Health {
 
 const hoursSince = (iso: string | undefined, now: number) => (iso ? (now - Date.parse(iso)) / 3600_000 : Infinity);
 
+// True when a concert listing failed this run, so an empty day may be missing events rather than empty.
+export function isIncomplete(snap: Snapshot): boolean {
+  return snap.sources.some((s) => !s.ok);
+}
+
 export function checkHealth(snap: Snapshot, now: number, today: string): Health {
   const problems: string[] = [];
   const warnings: string[] = [];
@@ -28,7 +33,9 @@ export function checkHealth(snap: Snapshot, now: number, today: string): Health 
     if (s.ok) continue;
     const down = hoursSince(s.lastSuccessAt, now);
     const since = s.lastSuccessAt ? `last success ${Math.round(down)}h ago` : "no success on record";
-    (down > SOURCE_DOWN_AFTER_H ? problems : warnings).push(`${s.name}: ${s.error} (${since})`);
+    // Retained listings keep the day pages honest, but the source itself is still broken.
+    const kept = s.retained ? "; showing last known listings" : "";
+    (down > SOURCE_DOWN_AFTER_H ? problems : warnings).push(`${s.name}: ${s.error} (${since}${kept})`);
   }
 
   if (today > BUDO_VALID_UNTIL) problems.push(`Martial-arts schedule ended ${BUDO_VALID_UNTIL}; add the new year's PDF to src/budo.ts.`);

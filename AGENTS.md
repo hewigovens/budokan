@@ -59,7 +59,14 @@ Run `bun run typecheck && bun test` before finishing any change.
 ## Data sources
 
 - Concerts: `schedule.enjoy-live.net` (artist + tour name) and `eventernote.com` (times).
-  Budokan's official site does not publish concerts.
+ Budokan's official site does not publish concerts.
+  - enjoy-live sits behind a Cloudflare managed challenge. It answers non-browser clients with
+    `403` + `cf-mitigated: challenge`, so scraping from Workers is blocked until the site owner
+    exempts us. The app carries the last published enjoy-live listings forward and shows a
+    "listings may be incomplete" notice instead of pretending those days are empty. Do not
+    "fix" the 403 by spoofing a browser fingerprint or solving the challenge: ask the operator.
+- If a source fails, `refresh()` keeps that source's last published records from the previous
+  snapshot (falling back to the archive) so a partial outage never deletes concert days.
 - Martial arts: `https://www.nipponbudokan.or.jp/shinkoujigyou/gyouji_08` links a yearly PDF. Each April,
   transcribe the new PDF into `src/budo.ts` and bump `BUDO_VALID_UNTIL`. `/health` errors once it expires.
 - A source returning 0 events is treated as a failure (layout change). If a parser breaks, reproduce the relevant structure with fictional entries

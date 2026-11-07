@@ -164,6 +164,100 @@ test("cron archives the previous snapshot before pruning past events", async () 
   } finally { fetcher.mockRestore(); }
 });
 
+test("a carried record takes today's times from the healthy source, not its stale merged copy", async () => {
+  const showDate = addDays(jstNow().date, 10);
+  const app = setup([{ ...shows[0], date: showDate, headline: "Future artist", open: "17:00", start: "18:00", url: "https://www.eventernote.com/events/9001", sources: ["enjoy-live.net", "eventernote.com"] }]);
+  const fetcher = spyOn(globalThis, "fetch").mockImplementation(Object.assign(async (input: Parameters<typeof fetch>[0]) => {
+    const url = String(input);
+    if (url.includes("enjoy-live")) return new Response("challenge", { status: 403 });
+    return new Response(`<li class="clearfix"><span class="day0">${showDate}</span><h4><a href="/events/9001">Future artist</a></h4>開場 16:00 開演 17:00</li>`);
+  }, { preconnect: fetch.preconnect }));
+  try {
+    let pending: Promise<unknown> | undefined;
+    await worker.scheduled({} as ScheduledController, app.env, { waitUntil: (p: Promise<unknown>) => { pending = p; } } as ExecutionContext);
+    await pending;
+    const shows = (JSON.parse(app.data.get("snapshot")!) as Snapshot).events.filter((e) => e.date === showDate);
+    expect(shows).toHaveLength(1);
+    expect(shows[0]).toMatchObject({ headline: "Future artist", open: "16:00", start: "17:00" });
+  } finally { fetcher.mockRestore(); }
+});
+
+test("a failing source keeps its published concerts instead of emptying their days", async () => {
+  const today = jstNow().date;
+  const showDate = addDays(today, 3);
+  // Previous refresh published an enjoy-live-only show; enjoy-live now answers 403.
+  const app = setup([
+    { ...shows[0], date: showDate, headline: "Sold Out Artist", title: "10th Anniversary", start: "18:00", url: "https://schedule.enjoy-live.net/artist.php?artist_id=soldout", sources: ["enjoy-live.net"] },
+  ]);
+  const fetcher = spyOn(globalThis, "fetch").mockImplementation(Object.assign(async (input: Parameters<typeof fetch>[0]) => {
+    if (String(input).includes("enjoy-live")) return new Response("challenge", { status: 403, headers: { "cf-mitigated": "challenge" } });
+    return new Response(`<li class="clearfix"><span class="day0">${addDays(today, 4)}</span><h4><a href="/events/9100">Another artist</a></h4></li>`);
+  }, { preconnect: fetch.preconnect }));
+  try {
+    let pending: Promise<unknown> | undefined;
+    await worker.scheduled({} as ScheduledController, app.env, { waitUntil: (p: Promise<unknown>) => { pending = p; } } as ExecutionContext);
+    await pending;
+    const current = JSON.parse(app.data.get("snapshot")!) as Snapshot;
+    const kept = current.events.find((e) => e.date === showDate);
+    expect(kept?.headline).toBe("Sold Out Artist");
+    expect(kept?.title).toBe("10th Anniversary");
+    const enjoy = current.sources.find((s) => s.name === "enjoy-live")!;
+    expect(enjoy.ok).toBe(false);
+    expect(enjoy.retained).toBe(true);
+    expect(enjoy.error).toContain("Cloudflare challenge");
+    // The day still renders the show, and says why the listings cannot be fully trusted.
+    app.isolate();
+    const html = await (await app.get(`/?lang=en&date=${showDate}`)).text();
+    expect(html).toContain("Sold Out Artist");
+    expect(html).not.toContain('class="empty degraded"');
+    expect(html).toContain('class="notice"');
+  } finally { fetcher.mockRestore(); }
+});
+
+test("a source already missing from the snapshot is recovered from the archive", async () => {
+  const today = jstNow().date;
+  const showDate = addDays(today, 5);
+  // Production shape: an earlier failed refresh already emptied the snapshot, but the archive has the record.
+  const app = setup([]);
+  app.data.set(ARCHIVE_KEY, JSON.stringify({ updatedAt: "2026-11-05T00:00:00Z", sources: [], events: [
+    { ...shows[0], id: "2026-11-11-aaaaaaaaaaaaaaaa", date: showDate, headline: "Archived Artist", url: "https://schedule.enjoy-live.net/artist.php?artist_id=archived", sources: ["enjoy-live.net"] },
+  ] }));
+  const fetcher = spyOn(globalThis, "fetch").mockImplementation(Object.assign(async (input: Parameters<typeof fetch>[0]) => {
+    if (String(input).includes("enjoy-live")) return new Response("challenge", { status: 403, headers: { "cf-mitigated": "challenge" } });
+    return new Response(`<li class="clearfix"><span class="day0">${addDays(today, 4)}</span><h4><a href="/events/9102">Another artist</a></h4></li>`);
+  }, { preconnect: fetch.preconnect }));
+  try {
+    let pending: Promise<unknown> | undefined;
+    await worker.scheduled({} as ScheduledController, app.env, { waitUntil: (p: Promise<unknown>) => { pending = p; } } as ExecutionContext);
+    await pending;
+    const current = JSON.parse(app.data.get("snapshot")!) as Snapshot;
+    const kept = current.events.find((e) => e.date === showDate);
+    expect(kept?.headline).toBe("Archived Artist");
+    // The published URL outlives the outage.
+    expect(kept?.id).toBe("2026-11-11-aaaaaaaaaaaaaaaa");
+    expect(current.sources.find((s) => s.name === "enjoy-live")?.retained).toBe(true);
+  } finally { fetcher.mockRestore(); }
+});
+
+test("an empty day while a concert source is down never claims nothing is scheduled", async () => {
+  const app = setup();
+  const clock = spyOn(Date, "now").mockReturnValue(Date.parse("2026-11-06T03:00:00Z"));
+  const fetcher = spyOn(globalThis, "fetch").mockImplementation(Object.assign(async (input: Parameters<typeof fetch>[0]) => {
+    if (String(input).includes("enjoy-live")) return new Response("challenge", { status: 403, headers: { "cf-mitigated": "challenge" } });
+    return new Response(`<li class="clearfix"><span class="day0">2026-11-20</span><h4><a href="/events/9101">Later artist</a></h4></li>`);
+  }, { preconnect: fetch.preconnect }));
+  try {
+    let pending: Promise<unknown> | undefined;
+    await worker.scheduled({} as ScheduledController, app.env, { waitUntil: (p: Promise<unknown>) => { pending = p; } } as ExecutionContext);
+    await pending;
+    const html = await (await app.get("/?lang=en&date=2026-11-12")).text();
+    expect(html).toContain('class="empty degraded"');
+    expect(html).toContain("Listings may be incomplete");
+    expect(html).not.toContain("No public event is on the calendar for this day.");
+    expect(html).toContain('class="notice"');
+  } finally { fetcher.mockRestore(); clock.mockRestore(); }
+});
+
 test("page requests in one isolate share KV reads until the memo expires, and refreshes replace it", async () => {
   const app = setup();
   await app.get("/api/events");

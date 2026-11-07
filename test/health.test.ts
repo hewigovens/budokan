@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { checkHealth } from "../src/health";
+import { checkHealth, isIncomplete } from "../src/health";
 import type { Snapshot } from "../src/types";
 
 const NOW = Date.parse("2026-10-20T12:00:00Z");
@@ -30,4 +30,13 @@ test("one failed run is a warning, a day of failures is an error", () => {
 test("stale data and expired budo list are errors", () => {
   expect(checkHealth(snap({ updatedAt: hoursAgo(20) }), NOW, "2026-10-20").problems[0]).toContain("cron");
   expect(checkHealth(snap(), NOW, "2027-04-02").problems[0]).toContain("src/budo.ts");
+});
+
+test("retained listings keep the alert but say why the pages are still usable", () => {
+  const down = snap({ sources: [{ name: "enjoy-live", ok: false, count: 0, error: "HTTP 403", checkedAt: hoursAgo(1), lastSuccessAt: hoursAgo(30), retained: true }] });
+  const h = checkHealth(down, NOW, "2026-10-20");
+  expect(h.status).toBe("error");
+  expect(h.problems[0]).toContain("showing last known listings");
+  expect(isIncomplete(down)).toBe(true);
+  expect(isIncomplete(snap())).toBe(false);
 });

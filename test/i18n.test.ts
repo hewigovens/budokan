@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { LOCALES, pickLocale } from "../src/i18n";
+import { esc } from "../src/html";
+import { INTL_LOCALE, LOCALES, STRINGS, pickLocale } from "../src/i18n";
 import { cjk, renderPage } from "../src/render";
 import type { Snapshot } from "../src/types";
 
@@ -78,4 +79,30 @@ test.each(LOCALES)("%s schedule pages do not advertise individual event rich res
     });
     expect(html).not.toMatch(/"@type":"(?:Event|MusicEvent|SportsEvent)"/);
   }
+});
+
+test.each(LOCALES)("%s renders a source failure as incomplete rather than as an empty day", (locale) => {
+  const snap: Snapshot = {
+    updatedAt: "2026-10-25T00:00:00Z",
+    sources: [{ name: "enjoy-live", ok: false, count: 0, error: "HTTP 403", checkedAt: "2026-10-25T00:00:00Z", lastSuccessAt: "2026-10-24T00:00:00Z", retained: true }],
+    events: [{ date: "2026-11-05", kind: "budo", headline: "剣道選手権大会", sport: "Kendo", sources: [] }],
+  };
+  const now = { date: "2026-10-25", time: "10:00" };
+  const html = renderPage(snap, { date: "2026-11-04", now, locale, incomplete: true });
+  const t = STRINGS[locale];
+  expect(html).toContain(esc(t.degradedTitle));
+  expect(html).toContain(esc(t.degradedBody));
+  expect(html).toContain(esc(t.degradedNotice));
+  expect(html).not.toContain(esc(t.nothingTitle));
+  expect(html).not.toContain(esc(t.nothingDay));
+  const data = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)![1]);
+  expect(data.description).toBe(t.metaDegradedDesc(new Intl.DateTimeFormat(INTL_LOCALE[locale], { timeZone: "UTC", year: "numeric", month: "long", day: "numeric" }).format(new Date("2026-11-04T00:00:00Z"))));
+});
+
+test("a completed day with every source healthy still says nothing is listed", () => {
+  const snap: Snapshot = { updatedAt: "2026-10-25T00:00:00Z", sources: [], events: [] };
+  const html = renderPage(snap, { date: "2026-11-04", now: { date: "2026-10-25", time: "10:00" }, locale: "en" });
+  expect(html).toContain("Nothing listed");
+  expect(html).not.toContain('class="empty degraded"');
+  expect(html).not.toContain('class="notice"');
 });
