@@ -26,6 +26,9 @@ export interface Strings {
   nothingTitle: string;
   nothingToday: string;
   nothingDay: string;
+  degradedTitle: string;
+  degradedBody: string;
+  degradedNotice: string;
   next: (name: string, date: string) => string;
   live: string;
   daytime: string;
@@ -45,6 +48,7 @@ export interface Strings {
   metaDayTitle: (date: string) => string;
   metaDayDesc: (date: string, names: string) => string;
   metaEmptyDesc: (date: string) => string;
+  metaDegradedDesc: (date: string) => string;
   sports: Record<string, string>;
   language: string;
   details: string;
@@ -86,6 +90,9 @@ const en: Strings = {
   nothingTitle: "Nothing listed",
   nothingToday: "No public event is on the calendar today. The hall may be closed, in setup for the next show, or hosting private practice.",
   nothingDay: "No public event is on the calendar for this day.",
+  degradedTitle: "Listings may be incomplete",
+  degradedBody: "One of the concert listings we read is unavailable right now, so a show on this day may be missing. Check the official sources before you travel.",
+  degradedNotice: "Concert listings are incomplete: a source could not be read. Check the official sources before you travel.",
   next: (name, date) => `Next: <b>${name}</b> on ${date}`,
   live: "Live",
   daytime: "Daytime",
@@ -105,6 +112,7 @@ const en: Strings = {
   metaDayTitle: (date) => `Nippon Budokan on ${date}: what's on | Budokan Today`,
   metaDayDesc: (date, names) => `At Nippon Budokan on ${date}: ${names}. Start times, details and the upcoming schedule.`,
   metaEmptyDesc: (date) => `Nothing is scheduled at Nippon Budokan on ${date}. See upcoming concerts and martial-arts events.`,
+  metaDegradedDesc: (date) => `The Nippon Budokan schedule for ${date} may be incomplete because a concert listing could not be read. Check the official sources.`,
   sports: {},
 };
 
@@ -135,6 +143,9 @@ const ja: Strings = {
   nothingTitle: "予定なし",
   nothingToday: "今日は公開イベントの予定がありません。休館日、次の公演の設営、または非公開の稽古の可能性があります。",
   nothingDay: "この日は公開イベントの予定がありません。",
+  degradedTitle: "情報がそろっていない可能性があります",
+  degradedBody: "参照しているコンサート情報の一部が現在取得できていません。この日の公演が表示されていない可能性があります。お出かけ前に公式情報をご確認ください。",
+  degradedNotice: "コンサート情報が不完全です：一部の情報元を取得できませんでした。お出かけ前に公式情報をご確認ください。",
   next: (name, date) => `次回：${date} <b>${name}</b>`,
   live: "ライブ",
   daytime: "日中",
@@ -154,6 +165,7 @@ const ja: Strings = {
   metaDayTitle: (date) => `${date}の日本武道館のイベント｜今日の武道館`,
   metaDayDesc: (date, names) => `${date}の日本武道館：${names}。開演時間や今後のスケジュールもチェック。`,
   metaEmptyDesc: (date) => `${date}の日本武道館は予定がありません。今後のライブや武道大会をチェック。`,
+  metaDegradedDesc: (date) => `${date}の日本武道館の情報は一部取得できておらず、掲載が不完全な可能性があります。公式情報をご確認ください。`,
   sports: {
     Jukendo: "銃剣道", Kendo: "剣道", Judo: "柔道", Karate: "空手道", Aikido: "合気道", Kyudo: "弓道",
     "Shorinji Kempo": "少林寺拳法", Naginata: "なぎなた", Kobudo: "古武道", Calligraphy: "書道",
@@ -188,6 +200,9 @@ const zhHans: Strings = {
   nothingTitle: "暂无活动",
   nothingToday: "今天没有公开活动。场馆可能休馆、正在为下一场演出布置，或举行非公开练习。",
   nothingDay: "这一天没有公开活动。",
+  degradedTitle: "信息可能不完整",
+  degradedBody: "我们读取的演唱会信息来源目前无法访问，这一天的演出可能没有显示。出行前请查看官方信息。",
+  degradedNotice: "演唱会信息不完整：部分来源无法读取。出行前请查看官方信息。",
   next: (name, date) => `下一场：${date} <b>${name}</b>`,
   live: "演出",
   daytime: "白天",
@@ -207,6 +222,7 @@ const zhHans: Strings = {
   metaDayTitle: (date) => `${date}日本武道馆活动｜今日武道馆`,
   metaDayDesc: (date, names) => `${date}日本武道馆：${names}。查看开演时间和后续日程。`,
   metaEmptyDesc: (date) => `${date}日本武道馆暂无活动。查看后续的演唱会和武道比赛。`,
+  metaDegradedDesc: (date) => `${date}日本武道馆的日程可能不完整，因为部分演唱会信息无法读取。请查看官方信息。`,
   sports: {
     Jukendo: "铳剑道", Kendo: "剑道", Judo: "柔道", Karate: "空手道", Aikido: "合气道", Kyudo: "弓道",
     "Shorinji Kempo": "少林寺拳法", Naginata: "薙刀", Kobudo: "古武道", Calligraphy: "书法",
@@ -239,6 +255,9 @@ const zhHant: Strings = {
   nothingTitle: "暫無活動",
   nothingToday: "今天沒有公開活動。場館可能休館、正在為下一場演出佈置，或舉行非公開練習。",
   nothingDay: "這一天沒有公開活動。",
+  degradedTitle: "資訊可能不完整",
+  degradedBody: "我們讀取的演唱會資訊來源目前無法存取，這一天的演出可能沒有顯示。出發前請查看官方資訊。",
+  degradedNotice: "演唱會資訊不完整：部分來源無法讀取。出發前請查看官方資訊。",
   next: (name, date) => `下一場：${date} <b>${name}</b>`,
   live: "演出",
   daytime: "白天",
@@ -258,6 +277,7 @@ const zhHant: Strings = {
   metaDayTitle: (date) => `${date}日本武道館活動｜今日武道館`,
   metaDayDesc: (date, names) => `${date}日本武道館：${names}。查看開演時間和後續行程。`,
   metaEmptyDesc: (date) => `${date}日本武道館暫無活動。查看後續的演唱會和武道比賽。`,
+  metaDegradedDesc: (date) => `${date}日本武道館的行程可能不完整，因為部分演唱會資訊無法讀取。請查看官方資訊。`,
   sports: {
     Jukendo: "銃劍道", Kendo: "劍道", Judo: "柔道", Karate: "空手道", Aikido: "合氣道", Kyudo: "弓道",
     "Shorinji Kempo": "少林寺拳法", Naginata: "薙刀", Kobudo: "古武道", Calligraphy: "書法",
@@ -292,6 +312,9 @@ const ko: Strings = {
   nothingTitle: "일정 없음",
   nothingToday: "오늘은 공개 이벤트가 없습니다. 휴관일이거나 다음 공연 준비 중, 또는 비공개 연습일 수 있습니다.",
   nothingDay: "이 날은 공개 이벤트가 없습니다.",
+  degradedTitle: "정보가 불완전할 수 있습니다",
+  degradedBody: "참조하는 공연 정보 출처 중 일부를 지금 불러올 수 없어, 이 날의 공연이 표시되지 않았을 수 있습니다. 방문 전 공식 정보를 확인하세요.",
+  degradedNotice: "공연 정보가 불완전합니다: 일부 출처를 불러오지 못했습니다. 방문 전 공식 정보를 확인하세요.",
   next: (name, date) => `다음: ${date} <b>${name}</b>`,
   live: "공연",
   daytime: "낮",
@@ -311,6 +334,7 @@ const ko: Strings = {
   metaDayTitle: (date) => `${date} 일본 부도칸 공연·이벤트 | 오늘의 부도칸`,
   metaDayDesc: (date, names) => `${date} 일본 부도칸: ${names}. 공연 시간과 앞으로의 일정도 확인하세요.`,
   metaEmptyDesc: (date) => `${date} 일본 부도칸에는 예정된 행사가 없습니다. 앞으로의 공연과 무도 대회를 확인하세요.`,
+  metaDegradedDesc: (date) => `${date} 일본 부도칸 일정은 일부 공연 정보를 불러오지 못해 불완전할 수 있습니다. 공식 정보를 확인하세요.`,
   sports: {
     Jukendo: "총검도", Kendo: "검도", Judo: "유도", Karate: "가라테", Aikido: "합기도", Kyudo: "궁도",
     "Shorinji Kempo": "소림사권법", Naginata: "나기나타", Kobudo: "고무도", Calligraphy: "서예",

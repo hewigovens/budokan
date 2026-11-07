@@ -101,6 +101,10 @@ html[lang="en"] .day{text-transform:uppercase}
 .small{font-size:12px;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums;line-height:1.7}
 .muted{color:var(--muted)}
 .offline{margin:0 0 12px;padding:8px 12px;border-radius:10px;background:var(--budo-bg);color:var(--budo);font-size:13px;text-align:center}
+.notice{margin:0 0 12px;padding:8px 12px;border-radius:10px;background:var(--budo-bg);color:var(--budo);font-size:13px}
+.notice a{color:inherit}
+.empty.degraded{border-style:solid;border-color:var(--budo)}
+.empty.degraded h2{color:var(--budo)}
 footer{margin-top:40px;font-size:12px;color:var(--muted)}
 footer p{margin:6px 0}
 footer .warn{color:var(--budo)}

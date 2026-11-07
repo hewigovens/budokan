@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { budoEvents, sportOf } from "../src/budo";
 import { mergeEvents } from "../src/merge";
-import { decode, parseEnjoyLive, parseEventernote } from "../src/scrape";
+import { decode, describeFailure, parseEnjoyLive, parseEventernote } from "../src/scrape";
 
 const fixture = (name: string) => readFileSync(`${import.meta.dir}/fixtures/${name}`, "utf8");
 
@@ -40,5 +40,18 @@ test("budo schedule and sport tagging", () => {
 
 test("decode handles entities", () => {
   expect(decode("it&rsquo;s &amp; &#x2661; <b>x</b>")).toBe("it’s & ♡ x");
+});
+
+test("an upstream challenge is reported as a block, not as a bug in the parser", () => {
+  expect(describeFailure(403, "challenge")).toBe("HTTP 403 (Cloudflare challenge; automated clients are blocked)");
+  expect(describeFailure(500, null)).toBe("HTTP 500");
+  expect(describeFailure(403, null)).toBe("HTTP 403");
+});
+
+test("a challenge page parses to zero events so it counts as a source failure", () => {
+  // Cloudflare's interstitial is 200-ish HTML with no calendar markup; it must never look like an empty day.
+  const challenge = `<html><head><title>Just a moment...</title></head><body><div class="main-content"></div></body></html>`;
+  expect(parseEnjoyLive(challenge)).toHaveLength(0);
+  expect(parseEventernote(challenge)).toHaveLength(0);
 });
 

@@ -1,6 +1,6 @@
 import { budoEvents } from "./budo";
 import { addDays, inDateWindow, isDate, jstNow } from "./dates";
-import { checkHealth } from "./health";
+import { checkHealth, isIncomplete } from "./health";
 import { ARCHIVE_KEY, isPublished, publishEvents } from "./events";
 import { isLocale, pickLocale } from "./i18n";
 import { mergeEvents } from "./merge";
@@ -13,6 +13,9 @@ import { eventPath } from "./urls";
 interface Env {
   EVENTS: KVNamespace;
 }
+
+// Host names recorded in an event's `sources`, keyed by the scraper's status name.
+const SOURCE_HOSTS: Record<string, string> = { "enjoy-live": "enjoy-live.net", eventernote: "eventernote.com" };
 
 const KEY = "snapshot";
 // KV bills every get, including edge-cached ones, so page requests share one read per key per isolate per minute.
@@ -52,6 +55,7 @@ async function save(env: Env, snapshot: Snapshot, previous?: Snapshot): Promise<
 
 async function refresh(env: Env): Promise<PublishedSnapshot> {
   const today = jstNow().date;
+  const earliest = addDays(today, -1);
   const checkedAt = new Date().toISOString();
   const prev = await env.EVENTS.get<Snapshot>(KEY, "json");
 
@@ -72,19 +76,31 @@ async function refresh(env: Env): Promise<PublishedSnapshot> {
   };
 
   const [enjoy, eventernote] = await Promise.all([run("enjoy-live", fetchEnjoyLive), run("eventernote", () => fetchEventernote(today))]);
+  const results = [enjoy, eventernote];
 
-  // If both scrapers fail, keep serving the previous concerts rather than wiping them.
-  let concerts = [enjoy.events, eventernote.events];
-  if (!enjoy.events.length && !eventernote.events.length) concerts = [prev?.events.filter((e) => e.kind === "concert") ?? []];
+  // A failing source must not erase its listings: carry its last published records forward, still
+  // in source-priority order, so its concert days do not silently become empty days. The previous
+  // snapshot is the newest copy; the archive recovers records an earlier failed run already dropped.
+  if (results.some((r) => !r.status.ok)) {
+    const archive = (await env.EVENTS.get<PublishedSnapshot>(ARCHIVE_KEY, "json"))?.events ?? [];
+    for (const r of results) {
+      if (r.status.ok) continue;
+      const host = SOURCE_HOSTS[r.status.name];
+      const fromPrev = (prev?.events ?? []).filter((e) => e.kind === "concert" && e.date >= earliest && e.sources.includes(host));
+      r.events = fromPrev.length ? fromPrev : archive.filter((e) => e.kind === "concert" && e.date >= earliest && e.sources.includes(host));
+      r.status.retained = r.events.length > 0;
+    }
+    console.log(JSON.stringify({ msg: "carried listings for failed sources", sources: results.filter((r) => !r.status.ok).map((r) => `${r.status.name}=${r.status.retained ? r.events.length : "none"}`) }));
+  }
 
-  const sources = [enjoy.status, eventernote.status];
+  const sources = results.map((r) => r.status);
   const snapshot: Snapshot = {
     updatedAt: checkedAt,
-    events: mergeEvents(budoEvents(), ...concerts).filter((e) => e.date >= addDays(today, -1)),
+    events: mergeEvents(budoEvents(), ...results.map((r) => r.events)).filter((e) => e.date >= earliest),
     sources,
   };
   const published = await save(env, snapshot, prev ?? undefined);
-  console.log(JSON.stringify({ msg: "refreshed", events: snapshot.events.length, sources: sources.map((s) => `${s.name}=${s.ok ? s.count : "FAIL"}`) }));
+  console.log(JSON.stringify({ msg: "refreshed", events: snapshot.events.length, sources: sources.map((s) => `${s.name}=${s.ok ? s.count : s.retained ? "CARRIED" : "FAIL"}`) }));
   return published;
 }
 
@@ -137,7 +153,7 @@ export default {
       }
       if (eventRoute && !event) return new Response("Event not found", { status: 404 });
       const health = checkHealth(snap, Date.now(), now.date).status;
-      return new Response(renderPage(snap, { date: event?.date ?? date, now, locale, health, event }), { headers });
+      return new Response(renderPage(snap, { date: event?.date ?? date, now, locale, health, incomplete: !event && isIncomplete(snap), event }), { headers });
     }
     switch (url.pathname) {
       case "/sitemap-events.xml":

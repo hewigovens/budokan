@@ -55,6 +55,8 @@ interface PageOptions {
   now: { date: string; time: string };
   locale?: Locale;
   health?: "ok" | "warning" | "error";
+  // True when a concert source failed, so an empty day may be missing listings rather than empty.
+  incomplete?: boolean;
   event?: PublishedEvent;
 }
 
@@ -233,11 +235,20 @@ export function renderPage(snap: Snapshot, opts: PageOptions): string {
     description = t.eventDescription(eventName(event), categoryOf(event, t));
   } else if (todays.length) {
     description = t.metaDayDesc(ctx.fullDate(date), todays.map((e) => e.headline).join(" / "));
+  } else if (opts.incomplete) {
+    description = t.metaDegradedDesc(ctx.fullDate(date));
   }
   const link = (href: string, text: string) => `<a href="${href}">${text}</a>`;
 
   const hero = todays.length
     ? todays.map((e) => heroCard(e, ctx, isToday ? now.time : undefined, !!event)).join("")
+    : opts.incomplete
+    ? `<div class="empty degraded">
+        <h2>${t.degradedTitle}</h2>
+        <p>${t.degradedBody}</p>
+        ${next ? `<p class="next">${t.next(`<span lang="ja">${cjk(next.headline)}</span>`, esc(ctx.longDate(next.date)))}</p>` : ""}
+        <div class="actions"><a class="btn ai" href="${esc(aiModeUrl(t.askAIDay(ctx.fullDate(date)), locale))}" target="_blank" rel="noopener">${SPARKLE}${t.askAI}</a></div>
+      </div>`
     : `<div class="empty">
         <h2>${t.nothingTitle}</h2>
         <p>${isToday ? t.nothingToday : t.nothingDay}</p>
@@ -277,6 +288,7 @@ ${renderSeo({ locale, title, description, date: pageDate, event })}
 <div class="layout">
 <main>
   <p class="offline" id="offline" hidden>${t.offline}</p>
+  ${!event && opts.incomplete ? `<p class="notice">${t.degradedNotice}</p>` : ""}
   <section class="today">
     ${event ? `<a class="back" href="/?lang=${locale}">← ${t.backToSchedule}</a><p class="event-date">${esc(ctx.fullDate(date))} · JST</p>` : `<nav class="daynav">
       ${navLink(locale, addDays(date, -1), now.date, t.prevDay, "‹")}
