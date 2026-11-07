@@ -164,6 +164,24 @@ test("cron archives the previous snapshot before pruning past events", async () 
   } finally { fetcher.mockRestore(); }
 });
 
+test("a carried record takes today's times from the healthy source, not its stale merged copy", async () => {
+  const showDate = addDays(jstNow().date, 10);
+  const app = setup([{ ...shows[0], date: showDate, headline: "Future artist", open: "17:00", start: "18:00", url: "https://www.eventernote.com/events/9001", sources: ["enjoy-live.net", "eventernote.com"] }]);
+  const fetcher = spyOn(globalThis, "fetch").mockImplementation(Object.assign(async (input: Parameters<typeof fetch>[0]) => {
+    const url = String(input);
+    if (url.includes("enjoy-live")) return new Response("challenge", { status: 403 });
+    return new Response(`<li class="clearfix"><span class="day0">${showDate}</span><h4><a href="/events/9001">Future artist</a></h4>開場 16:00 開演 17:00</li>`);
+  }, { preconnect: fetch.preconnect }));
+  try {
+    let pending: Promise<unknown> | undefined;
+    await worker.scheduled({} as ScheduledController, app.env, { waitUntil: (p: Promise<unknown>) => { pending = p; } } as ExecutionContext);
+    await pending;
+    const shows = (JSON.parse(app.data.get("snapshot")!) as Snapshot).events.filter((e) => e.date === showDate);
+    expect(shows).toHaveLength(1);
+    expect(shows[0]).toMatchObject({ headline: "Future artist", open: "16:00", start: "17:00" });
+  } finally { fetcher.mockRestore(); }
+});
+
 test("a failing source keeps its published concerts instead of emptying their days", async () => {
   const today = jstNow().date;
   const showDate = addDays(today, 3);

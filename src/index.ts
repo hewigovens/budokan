@@ -83,11 +83,16 @@ async function refresh(env: Env): Promise<PublishedSnapshot> {
   // snapshot is the newest copy; the archive recovers records an earlier failed run already dropped.
   if (results.some((r) => !r.status.ok)) {
     const archive = (await env.EVENTS.get<PublishedSnapshot>(ARCHIVE_KEY, "json"))?.events ?? [];
+    const healthy = results.filter((r) => r.status.ok).map((r) => SOURCE_HOSTS[r.status.name]);
+    // Carried records were merged with healthy sources before; drop the times those sources supply,
+    // or the stale copy (merged first) would override today's fresh times.
+    const carry = (e: BudokanEvent): BudokanEvent =>
+      e.sources.some((h) => healthy.includes(h)) ? { ...e, open: undefined, start: undefined, end: undefined, image: undefined } : e;
     for (const r of results) {
       if (r.status.ok) continue;
       const host = SOURCE_HOSTS[r.status.name];
       const fromPrev = (prev?.events ?? []).filter((e) => e.kind === "concert" && e.date >= earliest && e.sources.includes(host));
-      r.events = fromPrev.length ? fromPrev : archive.filter((e) => e.kind === "concert" && e.date >= earliest && e.sources.includes(host));
+      r.events = (fromPrev.length ? fromPrev : archive.filter((e) => e.kind === "concert" && e.date >= earliest && e.sources.includes(host))).map(carry);
       r.status.retained = r.events.length > 0;
     }
     console.log(JSON.stringify({ msg: "carried listings for failed sources", sources: results.filter((r) => !r.status.ok).map((r) => `${r.status.name}=${r.status.retained ? r.events.length : "none"}`) }));
