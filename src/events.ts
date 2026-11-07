@@ -6,7 +6,7 @@ export const eventSubtitle = (event: BudokanEvent) => event.title && event.title
 export const eventName = (event: BudokanEvent) => [event.headline, eventSubtitle(event)].filter(Boolean).join(" ");
 
 const norm = (text = "") => text.normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
-const eventernoteIds = (event: BudokanEvent) => eventUrls(event).flatMap((url) => url.match(/^https:\/\/(?:www\.)?eventernote\.com\/events\/(\d+)\/?$/)?.[1] ?? []);
+export const eventernoteIds = (event: BudokanEvent) => eventUrls(event).flatMap((url) => url.match(/^https:\/\/(?:www\.)?eventernote\.com\/events\/(\d+)\/?$/)?.[1] ?? []);
 const sameSlot = (a: BudokanEvent, b: BudokanEvent) => a.date === b.date && (!a.start || !b.start || a.start === b.start);
 
 function sourceMatch(a: BudokanEvent, b: BudokanEvent): boolean | undefined {

@@ -182,6 +182,43 @@ test("a carried record takes today's times from the healthy source, not its stal
   } finally { fetcher.mockRestore(); }
 });
 
+async function cron(app: ReturnType<typeof setup>, respond: (url: string) => Response) {
+  const fetcher = spyOn(globalThis, "fetch").mockImplementation(Object.assign(async (input: Parameters<typeof fetch>[0]) => respond(String(input)), { preconnect: fetch.preconnect }));
+  try {
+    let pending: Promise<unknown> | undefined;
+    await worker.scheduled({} as ScheduledController, app.env, { waitUntil: (p: Promise<unknown>) => { pending = p; } } as ExecutionContext);
+    await pending;
+    return JSON.parse(app.data.get("snapshot")!) as Snapshot;
+  } finally { fetcher.mockRestore(); }
+}
+
+test("an Eventernote outage keeps the last known times of carried shows", async () => {
+  const showDate = addDays(jstNow().date, 10);
+  const app = setup([{ ...shows[0], date: showDate, headline: "Future artist", open: "17:00", start: "18:00", url: "https://www.eventernote.com/events/9001", sourceUrls: ["https://schedule.enjoy-live.net/artist.php?artist_id=future"], sources: ["enjoy-live.net", "eventernote.com"] }]);
+  const current = await cron(app, (url) => url.includes("enjoy-live")
+    ? new Response(`<article class="calendar" id="${showDate.slice(0, 7)}"><tr><th class="day">${Number(showDate.slice(8))}日</th><td><strong><a href="./artist.php?artist_id=future">Future artist</a></strong></td></tr></article>`)
+    : new Response("unavailable", { status: 503 }));
+  const kept = current.events.filter((e) => e.date === showDate);
+  expect(kept).toHaveLength(1);
+  expect(kept[0]).toMatchObject({ open: "17:00", start: "18:00" });
+});
+
+test("a show rescheduled on the healthy source leaves no carried copy on its old date", async () => {
+  const today = jstNow().date;
+  const oldDate = addDays(today, 10), newDate = addDays(today, 20);
+  const app = setup([{ ...shows[0], date: oldDate, headline: "Future artist", start: "18:00", url: "https://www.eventernote.com/events/9001", sources: ["enjoy-live.net", "eventernote.com"] }]);
+  const current = await cron(app, (url) => url.includes("enjoy-live")
+    ? new Response("challenge", { status: 403 })
+    : new Response(`<li class="clearfix"><span class="day0">${newDate}</span><h4><a href="/events/9001">Future artist</a></h4>開場 17:00 開演 18:00</li>`));
+  expect(current.events.some((e) => e.date === oldDate)).toBe(false);
+  const moved = current.events.find((e) => e.date === newDate)!;
+  // The previously published record keeps its ID (and event URL) and follows the new date.
+  const records = app.archive().events.filter((e) => e.url === "https://www.eventernote.com/events/9001");
+  expect(records).toHaveLength(1);
+  expect(records[0]).toMatchObject({ id: moved.id, date: newDate });
+  expect(moved.id).toStartWith(oldDate);
+});
+
 test("a failing source keeps its published concerts instead of emptying their days", async () => {
   const today = jstNow().date;
   const showDate = addDays(today, 3);

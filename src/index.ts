@@ -1,7 +1,7 @@
 import { budoEvents } from "./budo";
 import { addDays, inDateWindow, isDate, jstNow } from "./dates";
 import { checkHealth, isIncomplete } from "./health";
-import { ARCHIVE_KEY, isPublished, publishEvents } from "./events";
+import { ARCHIVE_KEY, eventernoteIds, isPublished, publishEvents } from "./events";
 import { isLocale, pickLocale } from "./i18n";
 import { mergeEvents } from "./merge";
 import { renderPage } from "./render";
@@ -83,16 +83,20 @@ async function refresh(env: Env): Promise<PublishedSnapshot> {
   // snapshot is the newest copy; the archive recovers records an earlier failed run already dropped.
   if (results.some((r) => !r.status.ok)) {
     const archive = (await env.EVENTS.get<PublishedSnapshot>(ARCHIVE_KEY, "json"))?.events ?? [];
-    const healthy = results.filter((r) => r.status.ok).map((r) => SOURCE_HOSTS[r.status.name]);
-    // Carried records were merged with healthy sources before; drop the times those sources supply,
-    // or the stale copy (merged first) would override today's fresh times.
-    const carry = (e: BudokanEvent): BudokanEvent =>
-      e.sources.some((h) => healthy.includes(h)) ? { ...e, open: undefined, start: undefined, end: undefined, image: undefined } : e;
+    // A healthy Eventernote listing is authoritative for the show it identifies. A carried copy of a
+    // rescheduled show would leave a phantom date, and its stale times (merged first) would override
+    // fresh ones. Without a fresh counterpart, the carried copy keeps its last known times.
+    const fresh = new Map(results.filter((r) => r.status.ok).flatMap((r) => r.events.flatMap((e) => eventernoteIds(e).map((id) => [id, e.date] as const))));
+    const carry = (events: BudokanEvent[]) => events.flatMap((e): BudokanEvent[] => {
+      const dates = eventernoteIds(e).flatMap((id) => fresh.get(id) ?? []);
+      if (dates.some((d) => d !== e.date)) return [];
+      return dates.length ? [{ ...e, open: undefined, start: undefined, end: undefined, image: undefined }] : [e];
+    });
     for (const r of results) {
       if (r.status.ok) continue;
       const host = SOURCE_HOSTS[r.status.name];
       const fromPrev = (prev?.events ?? []).filter((e) => e.kind === "concert" && e.date >= earliest && e.sources.includes(host));
-      r.events = (fromPrev.length ? fromPrev : archive.filter((e) => e.kind === "concert" && e.date >= earliest && e.sources.includes(host))).map(carry);
+      r.events = carry(fromPrev.length ? fromPrev : archive.filter((e) => e.kind === "concert" && e.date >= earliest && e.sources.includes(host)));
       r.status.retained = r.events.length > 0;
     }
     console.log(JSON.stringify({ msg: "carried listings for failed sources", sources: results.filter((r) => !r.status.ok).map((r) => `${r.status.name}=${r.status.retained ? r.events.length : "none"}`) }));
