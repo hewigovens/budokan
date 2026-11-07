@@ -66,8 +66,8 @@ export function parseEventernote(html: string): BudokanEvent[] {
   return events;
 }
 
-// Cloudflare fronts enjoy-live.net with a managed challenge, which answers non-browser clients
-// with 403 and an interstitial instead of the schedule. Say so, or the failure reads as a bug here.
+// enjoy-live.net is behind Cloudflare. A managed challenge answers with 403 and an interstitial
+// instead of the schedule; say so, or the failure reads as a bug here.
 export function describeFailure(status: number, mitigated: string | null): string {
   return mitigated === "challenge" ? `HTTP ${status} (Cloudflare challenge; automated clients are blocked)` : `HTTP ${status}`;
 }

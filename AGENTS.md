@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Budokan Today: a Cloudflare Worker that shows what's on at Nippon Budokan (日本武道館) today.
-Live at https://budokan.hewig.dev (also https://budokan-today.hewigovens.workers.dev).
+Live at https://budokan.hewig.dev.
 
 ## Commands
 
@@ -20,7 +20,7 @@ Run `bun run typecheck && bun test` before finishing any change.
 
 ## How it works
 
-- A cron trigger (every 6h) calls `refresh()` in `src/index.ts`: scrape concerts, merge with the static
+- A refresh (every 6h) calls `refresh()` in `src/index.ts`: scrape concerts, merge with the static
   martial-arts list, store one JSON snapshot in KV (`EVENTS`, key `snapshot`).
 - `GET /` reads the snapshot and renders HTML server-side (`src/render.ts`). No client framework; the only
   client JS is service-worker registration and the offline banner.
@@ -54,17 +54,16 @@ Run `bun run typecheck && bun test` before finishing any change.
 | `src/icons.ts` | Inline SVG icons (logo, sparkle, pin, globe) |
 | `src/i18n.ts` | UI strings for en, ja, zh-Hans, zh-Hant, ko |
 | `public/` | Static assets: icons, `manifest.webmanifest`, `sw.js` (network-first pages, cache-first icons), `_headers`, `robots.txt`, `sitemap.xml` |
+| `host/workerd/` | Self-hosting under workerd: entry shim (disk-backed KV, static files, refresh route), `workerd.capnp`, systemd units, `deploy.sh` |
 | `.github/workflows/deploy.yml` | CI: typecheck + test on PRs and main; deploy on push to main |
 
 ## Data sources
 
 - Concerts: `schedule.enjoy-live.net` (artist + tour name) and `eventernote.com` (times).
  Budokan's official site does not publish concerts.
-  - enjoy-live sits behind a Cloudflare managed challenge. It answers non-browser clients with
-    `403` + `cf-mitigated: challenge`, so scraping from Workers is blocked until the site owner
-    exempts us. The app carries the last published enjoy-live listings forward and shows a
-    "listings may be incomplete" notice instead of pretending those days are empty. Do not
-    "fix" the 403 by spoofing a browser fingerprint or solving the challenge: ask the operator.
+  - enjoy-live only serves clients in Japan, so the refresh must run from a Japanese IP (see Deployment).
+    When it fails, the app carries the last enjoy-live listings forward and shows a "listings may be
+    incomplete" notice. Do not work around a block by spoofing a browser or solving a challenge.
 - If a source fails, `refresh()` keeps that source's last published records from the previous
   snapshot (falling back to the archive) so a partial outage never deletes concert days.
 - Martial arts: `https://www.nipponbudokan.or.jp/shinkoujigyou/gyouji_08` links a yearly PDF. Each April,
@@ -87,9 +86,17 @@ Run `bun run typecheck && bun test` before finishing any change.
 
 ## Deployment
 
-Pushing `main` to GitHub runs CI and deploys with `wrangler deploy` (needs the `CLOUDFLARE_API_TOKEN`
-secret and `CLOUDFLARE_ACCOUNT_ID` variable on the repo). The custom domain `budokan.hewig.dev` is declared
-in `wrangler.jsonc` under `routes`. KV and the cron trigger are also in `wrangler.jsonc`.
+Production runs under workerd (Cloudflare's open-source Workers runtime) on a server in Japan, behind
+Cloudflare, with the same `src/` code. The server, SSH host and proxy setup are not recorded here: ask the user.
+
+- `host/workerd/worker.ts` wraps the app: a disk directory stands in for KV (one file per key), `public/` is
+  served with `_headers` rules, and `POST` to host `refresh.internal` runs the refresh.
+- workerd listens on `127.0.0.1:8790`; a reverse proxy on the server terminates TLS in front of it.
+- `budokan-refresh.timer` runs the refresh every 6h. Logs: `journalctl -u budokan`.
+- Deploy with `host/workerd/deploy.sh <ssh-host>`: bundles with Bun locally, copies over SSH into `~/budokan`,
+  pins workerd to the version in `node_modules`, and restarts the services. It deploys production, so only run
+  it when the user asks.
+- CI still runs `wrangler deploy`, but that Worker has no route, cron or `workers.dev` URL.
 
 ## Version control
 
@@ -101,7 +108,7 @@ jj st                       # status
 jj describe -m "message"    # describe the working-copy change
 jj new                      # start the next change
 jj bookmark set main -r @-  # move main to the finished change
-jj git push --bookmark main  # this deploys to production via CI
+jj git push --bookmark main  # runs CI
 ```
 
-Pushing `main` deploys, so don't push or run `bun run deploy` without the user asking.
+Don't push or deploy without the user asking.

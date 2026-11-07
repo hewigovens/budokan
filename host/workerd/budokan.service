@@ -1,0 +1,15 @@
+[Unit]
+Description=Budokan Today (workerd)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=@USER@
+WorkingDirectory=@DIR@
+ExecStart=@DIR@/workerd serve @DIR@/workerd.capnp
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

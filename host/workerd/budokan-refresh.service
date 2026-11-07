@@ -1,0 +1,9 @@
+[Unit]
+Description=Refresh the Budokan Today schedule
+After=budokan.service
+Requires=budokan.service
+
+[Service]
+Type=oneshot
+User=@USER@
+ExecStart=/usr/bin/curl -fsS --max-time 120 -X POST -H "Host: refresh.internal" http://127.0.0.1:8790/
